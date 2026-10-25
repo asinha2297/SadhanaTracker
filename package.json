@@ -1,0 +1,28 @@
+{
+  "name": "sadhana-tracker",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:web:live": "VITE_API_MOCK=false npm run dev -w apps/web",
+    "seed": "npm run seed -w apps/api",
+    "build": "npm run build --workspaces --if-present",
+    "start": "cd apps/api && WEB_DIST=../web/dist node dist/index.js",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

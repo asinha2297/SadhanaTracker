@@ -1,0 +1,14 @@
+{
+  "name": "@sadhana/contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sadhana/domain": "*",
+    "zod": "^4.6.7"
+  }
+}
