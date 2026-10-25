@@ -57,7 +57,7 @@ export function LandingScreen() {
             <p className="mt-8 font-serif text-lg italic text-ink-muted">Hare Kṛṣṇa.</p>
           </div>
           <div>
-            <h2 className="font-serif text-xl text-ink">Photography</h2>
+            <h2 className="font-serif text-xl text-ink">Images</h2>
             <ul className="mt-3 space-y-2 text-xs leading-relaxed text-ink-muted">
               {CREDITS.map((credit) => (
                 <li key={credit.subject}>
@@ -76,6 +76,17 @@ export function LandingScreen() {
                 </li>
               ))}
             </ul>
+            <p className="mt-3 text-xs text-ink-muted">
+              Images resized for the web. Śloka carousel adapted from{' '}
+              <a href="https://skiper-ui.com" className="underline decoration-line underline-offset-2 hover:text-ink">
+                Skiper UI
+              </a>
+              , built with{' '}
+              <a href="https://swiperjs.com" className="underline decoration-line underline-offset-2 hover:text-ink">
+                Swiper
+              </a>
+              .
+            </p>
             <p className="mt-6 text-xs text-ink-muted">
               Verses from Bhagavad-gītā As It Is and Śrīmad-Bhāgavatam, translations by His Divine Grace A. C.
               Bhaktivedanta Swami Prabhupāda.

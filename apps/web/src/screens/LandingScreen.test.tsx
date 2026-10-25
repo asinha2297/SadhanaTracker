@@ -14,6 +14,16 @@ describe('LandingScreen', () => {
     expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toHaveAttribute('href', '/login')
   })
 
+  it('greets visitors with Śrīla Prabhupāda inside the japa-mālā', async () => {
+    setMockSession(null)
+    renderAt('/welcome')
+    const portrait = await screen.findByRole('figure', { name: 'Śrīla Prabhupāda' })
+    expect(within(portrait).getByAltText(/Mūrti of Śrīla Prabhupāda/)).toHaveAttribute('src', '/landing/prabhupada-portrait.jpg')
+    expect(within(portrait).getByText('Founder-ācārya of ISKCON')).toBeInTheDocument()
+    expect(screen.queryByAltText(/lotus/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Dedda71/)).toBeInTheDocument()
+  })
+
   it('offers a signed-in devotee the way to today', async () => {
     renderAt('/welcome')
     expect((await screen.findAllByRole('link', { name: "Open today's sadhana" }))[0]).toHaveAttribute('href', '/')
@@ -29,10 +39,13 @@ describe('LandingScreen', () => {
     expect(await carousel.findByText(/karmaṇy evādhikāras/)).toBeInTheDocument()
   })
 
-  it('credits the photographers', async () => {
+  it('credits the artists, photographers and the carousel design', async () => {
     setMockSession(null)
     renderAt('/welcome')
-    expect(await screen.findByRole('heading', { name: 'Photography' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Images' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /Wikimedia Commons/ }).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Mukunda Goswami/)).toBeInTheDocument()
+    expect(screen.getByText(/Raja Ravi Varma/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Skiper UI' })).toBeInTheDocument()
   })
 })

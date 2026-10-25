@@ -47,3 +47,80 @@
     @apply outline-2 outline-offset-2 outline-saffron;
   }
 }
+
+/* Śloka carousel: Skiper UI's "Skiper 49" coverflow on Swiper. Kept here rather than in an inline <style>,
+   which the content security policy forbids. */
+.sloka-swiper {
+  padding-bottom: 3rem;
+  --swiper-pagination-color: #d97706;
+  --swiper-pagination-bullet-inactive-color: var(--ink);
+  --swiper-pagination-bullet-inactive-opacity: 0.2;
+}
+
+.sloka-swiper .swiper-slide {
+  width: 15rem;
+  height: 18rem;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 40px -18px rgb(28 25 23 / 0.45);
+}
+
+.sloka-swiper .swiper-slide-shadow-left,
+.sloka-swiper .swiper-slide-shadow-right {
+  border-radius: inherit;
+}
+
+@media (min-width: 768px) {
+  .sloka-swiper .swiper-slide {
+    width: 18.75rem;
+    height: 21.875rem;
+  }
+}
+
+/* Hero portrait. Kept in the stylesheet (not inline) for the CSP; switched off for reduced motion. */
+.mala-counter {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0 5px rgb(251 191 36 / 0.95));
+  animation: mala-count 64.8s steps(108) infinite;
+}
+
+@keyframes mala-count {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.portrait-sweep {
+  background: conic-gradient(from 0deg, transparent 0 60%, rgb(242 176 74 / 0.95) 82%, transparent 94%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: portrait-sweep 7s linear infinite;
+}
+
+@keyframes portrait-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.portrait-drift {
+  animation: portrait-drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes portrait-drift {
+  from {
+    transform: scale(1.04) translateY(0);
+  }
+  to {
+    transform: scale(1.12) translateY(-2%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mala-counter,
+  .portrait-sweep,
+  .portrait-drift {
+    animation: none;
+  }
+}

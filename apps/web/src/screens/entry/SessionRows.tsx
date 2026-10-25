@@ -128,16 +128,19 @@ export function HearingRows({ form }: { form: UseFormReturn<DailyEntry> }) {
       {fields.map((field, index) => (
         <Row
           key={field.id}
-          columns="sm:grid-cols-[2fr_1fr_1fr_6rem]"
+          columns="sm:grid-cols-[1fr_1fr_6rem]"
           removeLabel="Remove hearing session"
           onRemove={() => remove(index)}
         >
-          <TextField
-            id={`hearing-${index}-lecture`}
-            label="Lecture"
-            error={errors?.[index]?.lectureTitle?.message}
-            {...form.register(`hearing.${index}.lectureTitle`)}
-          />
+          {/* Lecture titles run long, so they get a line of their own above speaker, source and minutes. */}
+          <div className="sm:col-span-3">
+            <TextField
+              id={`hearing-${index}-lecture`}
+              label="Lecture"
+              error={errors?.[index]?.lectureTitle?.message}
+              {...form.register(`hearing.${index}.lectureTitle`)}
+            />
+          </div>
           <TextField
             id={`hearing-${index}-speaker`}
             label="Speaker"

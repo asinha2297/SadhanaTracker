@@ -1,7 +1,13 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import 'swiper/css'
+import 'swiper/css/a11y'
+import 'swiper/css/effect-coverflow'
+import 'swiper/css/pagination'
+import { A11y, Autoplay, EffectCoverflow, Keyboard, Pagination } from 'swiper/modules'
+import { Swiper, SwiperSlide } from 'swiper/react'
 import { EYEBROW } from '../../components/styles'
-import { PRACTICES, QUOTES, SLOKAS, STEPS, type Sloka } from '../../lib/landing'
+import { PRACTICES, QUOTES, SLOKAS, STEPS, type SlokaSlide } from '../../lib/landing'
 import { rise, stagger, usePrefersReducedMotion } from '../../lib/motion'
 import { Ways } from './Ways'
 
@@ -17,19 +23,45 @@ function SectionHeading({ eyebrow, title, lead }: { eyebrow: string; title: stri
   )
 }
 
+/**
+ * Coverflow of pictures, each opening its śloka below. Adapted from Skiper UI's "Skiper 49" carousel
+ * (credited in the footer); its styles live in index.css because the CSP forbids inline <style>.
+ */
 export function SlokaCarousel({ intervalMs = 8000 }: { intervalMs?: number }) {
+  const reduced = usePrefersReducedMotion()
   const [index, setIndex] = useState(0)
-  useEffect(() => {
-    const timer = setInterval(() => setIndex((current) => (current + 1) % SLOKAS.length), intervalMs)
-    return () => clearInterval(timer)
-  }, [index, intervalMs])
-  const sloka = SLOKAS[index] as Sloka
+  const sloka = SLOKAS[index] as SlokaSlide
 
   return (
-    <section aria-label="Ślokas" className="border-y border-line bg-card/60 py-16 md:py-24">
+    <section aria-label="Ślokas" className="overflow-hidden border-y border-line bg-card/60 py-16 md:py-24">
       <div className="mx-auto max-w-4xl px-5 text-center">
         <p className={EYEBROW}>Śloka</p>
-        <div className="relative mt-8 min-h-[18rem]">
+        <motion.div variants={rise} initial="hidden" whileInView="show" viewport={inView} className="-mx-5 mt-8 sm:mx-0">
+          <Swiper
+            modules={[EffectCoverflow, Pagination, Autoplay, Keyboard, A11y]}
+            effect="coverflow"
+            coverflowEffect={{ rotate: 40, stretch: 0, depth: 100, modifier: 1, slideShadows: true }}
+            slidesPerView="auto"
+            centeredSlides
+            grabCursor
+            loop
+            slideToClickedSlide
+            speed={reduced ? 0 : 600}
+            autoplay={reduced ? false : { delay: intervalMs, disableOnInteraction: true, pauseOnMouseEnter: true }}
+            keyboard={{ enabled: true, onlyInViewport: true }}
+            pagination={{ clickable: true }}
+            a11y={{ paginationBulletMessage: 'Verse {{index}}', slideLabelMessage: 'Picture {{index}} of {{slidesLength}}' }}
+            onRealIndexChange={(swiper) => setIndex(swiper.realIndex)}
+            className="sloka-swiper"
+          >
+            {SLOKAS.map((slide) => (
+              <SwiperSlide key={slide.source}>
+                <img src={slide.image} alt={slide.alt} loading="lazy" className="h-full w-full object-cover" />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </motion.div>
+        <div className="relative mt-6 min-h-[18rem]">
           <AnimatePresence mode="wait">
             <motion.figure
               key={index}
@@ -51,18 +83,6 @@ export function SlokaCarousel({ intervalMs = 8000 }: { intervalMs?: number }) {
               </figcaption>
             </motion.figure>
           </AnimatePresence>
-        </div>
-        <div className="mt-8 flex justify-center gap-2">
-          {SLOKAS.map((_, dot) => (
-            <button
-              key={dot}
-              type="button"
-              aria-label={`Verse ${dot + 1}`}
-              aria-pressed={dot === index}
-              onClick={() => setIndex(dot)}
-              className={`h-2 rounded-full transition-all ${dot === index ? 'w-8 bg-saffron' : 'w-2 bg-ink/15 hover:bg-ink/30'}`}
-            />
-          ))}
         </div>
       </div>
     </section>

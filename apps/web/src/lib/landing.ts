@@ -11,48 +11,73 @@ export const HERO_SLOKA: Sloka = {
   source: 'Bhagavad-gītā 18.66',
 }
 
-export const SLOKAS: Sloka[] = [
+/** A śloka with the picture shown for it in the landing carousel. */
+export interface SlokaSlide extends Sloka {
+  image: string
+  alt: string
+}
+
+export const HERO_PORTRAIT = {
+  src: '/landing/prabhupada-portrait.jpg',
+  alt: 'Mūrti of Śrīla Prabhupāda, garlanded with marigolds and roses',
+}
+
+export const SLOKAS: SlokaSlide[] = [
   {
     sanskrit: ['ananyāś cintayanto māṁ', 'ye janāḥ paryupāsate', 'teṣāṁ nityābhiyuktānāṁ', 'yoga-kṣemaṁ vahāmy aham'],
     translation:
       'But those who always worship Me with exclusive devotion, meditating on My transcendental form — to them I carry what they lack, and I preserve what they have.',
     source: 'Bhagavad-gītā 9.22',
+    image: '/landing/radha-krishna.jpg',
+    alt: 'Kṛṣṇa and Rādhā gazing at each other from a balcony, a Kangra painting',
   },
   {
     sanskrit: ['maharṣīṇāṁ bhṛgur ahaṁ', 'girām asmy ekam akṣaram', 'yajñānāṁ japa-yajño ’smi', 'sthāvarāṇāṁ himālayaḥ'],
     translation:
       'Of the great sages I am Bhṛgu; of vibrations I am the transcendental oṁ. Of sacrifices I am the chanting of the holy names, and of immovable things I am the Himālayas.',
     source: 'Bhagavad-gītā 10.25',
+    image: '/landing/prabhupada.jpg',
+    alt: 'Śrīla Prabhupāda chanting beside Lord Jagannātha in Golden Gate Park, 1967',
   },
   {
     sanskrit: ['karmaṇy evādhikāras te', 'mā phaleṣu kadācana', 'mā karma-phala-hetur bhūr', 'mā te saṅgo ’stv akarmaṇi'],
     translation:
       'You have a right to perform your prescribed duty, but you are not entitled to the fruits of action. Never consider yourself the cause of the results of your activities, and never be attached to not doing your duty.',
     source: 'Bhagavad-gītā 2.47',
+    image: '/landing/krishna-arjuna-chariot.jpg',
+    alt: 'Kṛṣṇa and Arjuna on a golden chariot',
   },
   {
     sanskrit: ['yuktāhāra-vihārasya', 'yukta-ceṣṭasya karmasu', 'yukta-svapnāvabodhasya', 'yogo bhavati duḥkha-hā'],
     translation:
       'He who is regulated in his habits of eating, sleeping, recreation and work can mitigate all material pains by practicing the yoga system.',
     source: 'Bhagavad-gītā 6.17',
+    image: '/landing/krishna-flute.jpg',
+    alt: 'Kṛṣṇa playing His flute among the cows and gopīs, a Pahari painting',
   },
   {
     sanskrit: ['man-manā bhava mad-bhakto', 'mad-yājī māṁ namaskuru', 'mām evaiṣyasi satyaṁ te', 'pratijāne priyo ’si me'],
     translation:
       'Always think of Me, become My devotee, worship Me and offer your homage unto Me. Thus you will come to Me without fail. I promise you this because you are My very dear friend.',
     source: 'Bhagavad-gītā 18.65',
+    image: '/landing/krishna-arjuna-kurukshetra.jpg',
+    alt: 'Kṛṣṇa and Arjuna on the battlefield of Kurukṣetra, painted about 1820',
   },
   {
     sanskrit: ['harer nāma harer nāma', 'harer nāmaiva kevalam', 'kalau nāsty eva nāsty eva', 'nāsty eva gatir anyathā'],
     translation:
       'In this Age of Kali there is no other means, no other means, no other means for self-realization than chanting the holy name, chanting the holy name, chanting the holy name of Lord Hari.',
     source: 'Bṛhan-nāradīya Purāṇa, quoted in Śrī Caitanya-caritāmṛta Ādi 17.21',
+    image: '/landing/caitanya-sankirtana.jpg',
+    alt: 'Śrī Caitanya Mahāprabhu leading saṅkīrtana through the streets',
   },
   {
     sanskrit: ['nitya-siddha kṛṣṇa-prema ‘sādhya’ kabhu naya', 'śravaṇādi-śuddha-citte karaye udaya'],
     translation:
       'Pure love for Kṛṣṇa is eternally established in the hearts of the living entities. It is not something to be gained from another source. When the heart is purified by hearing and chanting, this love naturally awakens.',
     source: 'Śrī Caitanya-caritāmṛta Madhya 22.107',
+    image: '/landing/yasoda-krishna.jpg',
+    alt: 'Mother Yaśodā holding child Kṛṣṇa, by Raja Ravi Varma',
   },
 ]
 
@@ -144,11 +169,11 @@ const BY_2 = 'https://creativecommons.org/licenses/by/2.0/'
 
 export const CREDITS: Credit[] = [
   {
-    subject: 'Lotus',
-    artist: 'Hong Zhang (jennyzhh2008)',
-    license: 'CC0',
-    licenseUrl: CC0,
-    page: 'https://commons.wikimedia.org/wiki/File:Lotus_flower_(978659).jpg',
+    subject: 'Mūrti of Śrīla Prabhupāda',
+    artist: 'Dedda71',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: BY_SA_3,
+    page: 'https://commons.wikimedia.org/wiki/File:Prabhupada_statue_(detail).jpg',
   },
   {
     subject: 'Japa mālā',
@@ -184,6 +209,55 @@ export const CREDITS: Credit[] = [
     license: 'CC BY 2.0',
     licenseUrl: BY_2,
     page: 'https://commons.wikimedia.org/wiki/File:Eye_drop_-_Flickr_-_sjoe.jpg',
+  },
+  {
+    subject: 'Kṛṣṇa and Rādhā, Kangra school (Tokyo National Museum)',
+    artist: 'photograph by Wmpearl',
+    license: 'CC0',
+    licenseUrl: CC0,
+    page: 'https://commons.wikimedia.org/wiki/File:Krishna_and_Radha,_Kangra_school,_watercolor_and_gold,_Tokyo_National_Museum.JPG',
+  },
+  {
+    subject: 'Śrīla Prabhupāda in Golden Gate Park, 1967',
+    artist: 'Mukunda Goswami',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: BY_SA_3,
+    page: 'https://commons.wikimedia.org/wiki/File:Bhaktivedanta_Swami_with_Jagannath_in_Golden_Gate_Park,_February_1967.jpg',
+  },
+  {
+    subject: 'Kṛṣṇa and Arjuna on the chariot (British Museum)',
+    artist: 'unknown artist',
+    license: 'public domain',
+    licenseUrl: '',
+    page: 'https://commons.wikimedia.org/wiki/File:Krishna_Arjuna_Gita.jpg',
+  },
+  {
+    subject: 'Kṛṣṇa with flute, Pahari school (Freer Gallery of Art)',
+    artist: 'unknown artist',
+    license: 'CC0',
+    licenseUrl: CC0,
+    page: 'https://commons.wikimedia.org/wiki/File:Krishna_with_flute.jpg',
+  },
+  {
+    subject: 'Kṛṣṇa and Arjuna at Kurukṣetra (San Diego Museum of Art)',
+    artist: 'unknown artist, about 1820',
+    license: 'public domain',
+    licenseUrl: '',
+    page: 'https://commons.wikimedia.org/wiki/File:Dialogue_between_Krishna_and_Arjuna_on_the_battlefield_of_Kurukshetra_(6124590103).jpg',
+  },
+  {
+    subject: 'Śrī Caitanya’s nagara-kīrtana (British Library)',
+    artist: 'Calcutta Art Studio',
+    license: 'public domain',
+    licenseUrl: '',
+    page: 'https://commons.wikimedia.org/wiki/File:Chaitanya_sankirtan.jpg',
+  },
+  {
+    subject: 'Yaśodā and Kṛṣṇa',
+    artist: 'Raja Ravi Varma',
+    license: 'public domain',
+    licenseUrl: '',
+    page: 'https://commons.wikimedia.org/wiki/File:Yashoda_with_Krishna,_Raja_Ravi_Varma.jpg',
   },
   {
     subject: 'Dawn on the Gaṅgā',
