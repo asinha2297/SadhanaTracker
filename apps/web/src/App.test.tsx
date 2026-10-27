@@ -25,6 +25,15 @@ describe('session guard', () => {
     expect(screen.getByRole('heading', { name: 'Haribol.' })).toBeInTheDocument()
   })
 
+  it('offers no public sign-up', async () => {
+    setMockSession(null)
+    renderAt('/login')
+    await screen.findByRole('heading', { name: 'Haribol.' })
+    expect(screen.queryByRole('link', { name: 'Create an account' })).not.toBeInTheDocument()
+    renderAt('/signup')
+    expect(await screen.findByText('This path leads nowhere.')).toBeInTheDocument()
+  })
+
   it('keeps a signed-in devotee away from the login screen', async () => {
     renderAt('/login')
     await expectLocation('/')
@@ -199,7 +208,8 @@ describe('shell', () => {
     const nav = await mainNav()
     expect(screen.getByText('Rādhikā Devī Dāsī')).toBeInTheDocument()
     expect(nav.getByRole('link', { name: 'Today' })).toBeInTheDocument()
-    expect(nav.queryByRole('link', { name: 'Group report' })).not.toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: 'Report' })).not.toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: 'Master admin' })).not.toBeInTheDocument()
     expect(nav.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument()
   })
 
@@ -207,7 +217,8 @@ describe('shell', () => {
     setMockSession(admin)
     renderAt('/help')
     const nav = await mainNav()
-    expect(nav.getByRole('link', { name: 'Group report' })).toBeInTheDocument()
+    expect(nav.getByRole('link', { name: 'Report' })).toBeInTheDocument()
+    expect(nav.getByRole('link', { name: 'Master admin' })).toBeInTheDocument()
     expect(nav.getByRole('link', { name: 'Administration' })).toBeInTheDocument()
   })
 

@@ -123,7 +123,7 @@ function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
             <li key={date}>
               <Link to={`/entry/${date}`} aria-label={longDate(date)} className="block h-full">
                 <Card
-                  className={`h-full transition-colors hover:border-saffron/40 ${date === today ? 'border-saffron/50' : ''}`}
+                  className={`h-full transition-colors hover:border-peacock/40 ${date === today ? 'border-saffron/50' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-ink">
@@ -140,7 +140,7 @@ function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
                   </div>
                   {entry && !future && <p className="mt-2 text-sm text-ink-muted">{totalsLine(dailyTotals(entry))}</p>}
                   {entry && !future && dayTarget && meetsTarget(dailyTotals(entry), dayTarget) && (
-                    <p className="mt-1 text-xs font-semibold text-peacock-text">Target met</p>
+                    <p className="mt-1 text-xs font-semibold text-tulasi">Target met</p>
                   )}
                   {pendingDates.has(date) && <p className="mt-1 text-xs font-medium text-saffron-text">Pending sync</p>}
                 </Card>

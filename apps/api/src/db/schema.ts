@@ -7,14 +7,6 @@ const ROLES = ['DEVOTEE', 'COORDINATOR', 'ADMIN'] as const
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 const expiresAt = () => timestamp('expires_at', { withTimezone: true }).notNull()
 
-export const groups = pgTable('groups', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  coordinatorId: text('coordinator_id').notNull(),
-  canReviewRecords: boolean('can_review_records').notNull().default(false),
-  createdAt: createdAt(),
-})
-
 export const accounts = pgTable(
   'accounts',
   {
@@ -22,10 +14,10 @@ export const accounts = pgTable(
     name: text('name').notNull(),
     role: text('role', { enum: ROLES }).notNull(),
     active: boolean('active').notNull().default(true),
-    pending: boolean('pending').notNull().default(false),
     mustChangePassword: boolean('must_change_password').notNull().default(false),
     passwordHash: text('password_hash').notNull(),
-    groupId: text('group_id').references(() => groups.id, { onDelete: 'set null' }),
+    // A coordinator with this grant sees individual rows in reports and exports; administrators always do.
+    canReviewRecords: boolean('can_review_records').notNull().default(false),
     joinedAt: date('joined_at', { mode: 'string' }).notNull(),
     // Sign-in identifiers, stored normalized (E.164, lower-case) so uniqueness holds.
     phone: text('phone').notNull(),
@@ -139,5 +131,4 @@ export const auditEvents = pgTable('audit_events', {
 })
 
 export type AccountRow = typeof accounts.$inferSelect
-export type GroupRow = typeof groups.$inferSelect
 export type EntryRow = typeof entries.$inferSelect

@@ -17,10 +17,10 @@ describe('navItemsFor', () => {
     ])
   })
 
-  it('adds congregation screens for a coordinator and administration only for an admin', () => {
-    expect(labels('COORDINATOR')).toEqual(expect.arrayContaining(['Group report', 'Roster', 'Export']))
+  it('adds the report, master admin and export for a coordinator, and administration only for an admin', () => {
+    expect(labels('COORDINATOR')).toEqual(expect.arrayContaining(['Report', 'Master admin', 'Export']))
     expect(labels('COORDINATOR')).not.toContain('Administration')
-    expect(labels('ADMIN')).toEqual(expect.arrayContaining(['Group report', 'Roster', 'Export', 'Administration']))
+    expect(labels('ADMIN')).toEqual(expect.arrayContaining(['Report', 'Master admin', 'Export', 'Administration']))
   })
 
   it('marks exactly the four thumb-zone screens as primary', () => {

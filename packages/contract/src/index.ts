@@ -91,16 +91,6 @@ export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(8, 'Use at least 8 characters'),
 })
 
-export const SignupInputSchema = z.object({
-  name: z.string().trim().min(1, 'Enter your name'),
-  groupId: z.string().min(1, 'Choose your group'),
-  phone: mobileNumber,
-  code: verificationCode,
-  email: optionalEmail,
-  password: z.string().min(8, 'Use at least 8 characters'),
-})
-export type SignupInput = z.infer<typeof SignupInputSchema>
-
 export const EntryRecordSchema = DailyEntrySchema.extend({ updatedAt: z.string() })
 export type EntryRecord = z.infer<typeof EntryRecordSchema>
 
@@ -127,7 +117,6 @@ export type ProfileInput = z.infer<typeof ProfileInputSchema>
 export const ProfileSchema = ProfileInputSchema.omit({ code: true }).extend({
   devoteeId: z.string(),
   name: z.string(),
-  group: z.object({ id: z.string(), name: z.string() }).nullable(),
 })
 export type Profile = z.infer<typeof ProfileSchema>
 
@@ -139,33 +128,19 @@ export const RemindersSchema = z.object({
 })
 export type Reminders = z.infer<typeof RemindersSchema>
 
-export const PublicGroupSchema = z.object({ id: z.string(), name: z.string() })
-export type PublicGroup = z.infer<typeof PublicGroupSchema>
-
-export const GroupSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  memberCount: z.number().int(),
-  canReviewRecords: z.boolean(),
-})
-export type Group = z.infer<typeof GroupSchema>
-
-export const NewGroupSchema = z.object({ name: z.string().trim().min(1, 'Enter a group name') })
-
-export const DevoteeSummarySchema = z.object({ devoteeId: z.string(), name: z.string(), groupId: z.string().nullable() })
-export type DevoteeSummary = z.infer<typeof DevoteeSummarySchema>
-
-export const MemberSchema = z.object({
+/** An account as those who manage accounts see it. */
+export const AccountSchema = z.object({
   devoteeId: z.string(),
   name: z.string(),
   role: RoleSchema,
   active: z.boolean(),
-  pending: z.boolean(),
   joinedAt: LocalDateSchema,
   phone: z.string(),
   email: z.string().optional(),
+  /** A coordinator with this grant sees individual rows in reports and exports (administrators always do). */
+  canReviewRecords: z.boolean(),
 })
-export type Member = z.infer<typeof MemberSchema>
+export type Account = z.infer<typeof AccountSchema>
 
 export const DayStatusSchema = z.enum(['MISSING', 'ZERO_ENTRY', 'RECORDED'])
 
@@ -185,8 +160,7 @@ export const MemberWeekSchema = z.object({
 })
 export type MemberWeek = z.infer<typeof MemberWeekSchema>
 
-export const GroupReportSchema = z.object({
-  group: z.object({ id: z.string(), name: z.string() }),
+export const ReportSchema = z.object({
   week: z.object({ start: LocalDateSchema, end: LocalDateSchema }),
   summary: z.object({
     members: z.number().int(),
@@ -197,28 +171,27 @@ export const GroupReportSchema = z.object({
   }),
   members: z.array(MemberWeekSchema).optional(),
 })
-export type GroupReport = z.infer<typeof GroupReportSchema>
+export type Report = z.infer<typeof ReportSchema>
 
 export const PendingResetSchema = z.object({ devoteeId: z.string(), name: z.string(), requestedAt: z.string() })
 export type PendingReset = z.infer<typeof PendingResetSchema>
 
 export const NewDevoteeSchema = z.object({
-  name: z.string().trim().min(1, "Enter the devotee's name"),
-  role: RoleSchema,
-  groupId: z.string().nullable(),
+  name: z.string().trim().min(1, "Enter the devotee's name").max(200, 'Keep it shorter'),
   phone: mobileNumber,
   email: optionalEmail,
+  role: RoleSchema.default('DEVOTEE'),
 })
 export type NewDevoteeInput = z.infer<typeof NewDevoteeSchema>
 
-export const CreatedDevoteeSchema = z.object({ devotee: MemberSchema, temporaryPassword: z.string() })
+export const CreatedDevoteeSchema = z.object({ devotee: AccountSchema, temporaryPassword: z.string() })
 export type CreatedDevotee = z.infer<typeof CreatedDevoteeSchema>
 
 export const DevoteePatchSchema = z.object({
   name: z.string().trim().min(1, "Enter the devotee's name").max(200, 'Keep it shorter').optional(),
   active: z.boolean().optional(),
   role: RoleSchema.optional(),
-  groupId: z.string().nullable().optional(),
+  canReviewRecords: z.boolean().optional(),
 })
 export type DevoteePatch = z.infer<typeof DevoteePatchSchema>
 

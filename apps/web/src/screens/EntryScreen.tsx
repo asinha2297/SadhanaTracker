@@ -170,7 +170,7 @@ function RoundsField({ form, target }: { form: UseFormReturn<DailyEntry>; target
           type="button"
           aria-label="One round fewer"
           onClick={() => set(current - 1)}
-          className="flex size-12 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-ink/5"
+          className="flex size-12 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-peacock/8"
         >
           <Minus className="size-5" aria-hidden />
         </button>
@@ -196,7 +196,7 @@ function RoundsField({ form, target }: { form: UseFormReturn<DailyEntry>; target
           <Plus className="size-5" aria-hidden />
         </button>
       </div>
-      {error && <p className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-center text-sm text-red-700">{error}</p>}
     </Card>
   )
 }

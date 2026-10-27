@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 import { Wordmark } from '../components/Wordmark'
-import { CREDITS } from '../lib/landing'
 import { Hero } from './landing/Hero'
 import { HowItWorks, MantraBanner, PrabhupadaQuotes, Practices, SlokaCarousel } from './landing/Sections'
 import { Ways } from './landing/Ways'
@@ -21,14 +20,9 @@ export function LandingScreen() {
                 Open today's sadhana
               </Link>
             ) : (
-              <>
-                <Link to="/login" className="hidden text-sm font-medium text-ink-muted transition-colors hover:text-ink sm:inline">
-                  Sign in
-                </Link>
-                <Link to="/signup" className="rounded-full bg-saffron px-5 py-2 text-sm font-semibold text-white">
-                  Create an account
-                </Link>
-              </>
+              <Link to="/login" className="rounded-full bg-saffron px-5 py-2 text-sm font-semibold text-white">
+                Sign in
+              </Link>
             )}
           </nav>
         </div>
@@ -44,54 +38,21 @@ export function LandingScreen() {
       </main>
 
       <footer className="border-t border-line bg-card/40 py-14">
-        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-[1.1fr_1fr]">
-          <div>
-            <Wordmark />
-            <p className="mt-5 max-w-md text-sm leading-relaxed text-ink-muted">
-              Built for the Sharanagati congregation to keep the daily vow of japa, reading and hearing, with privacy as
-              a first principle.
-            </p>
-            <div className="mt-6">
-              <Ways signedIn={signedIn} />
-            </div>
-            <p className="mt-8 font-serif text-lg italic text-ink-muted">Hare Kṛṣṇa.</p>
+        <div className="mx-auto max-w-6xl px-5">
+          <Wordmark />
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-ink-muted">
+            Built for the Sharanagati congregation to keep the daily vow of japa, reading and hearing, with privacy as a
+            first principle.
+          </p>
+          <div className="mt-6">
+            <Ways signedIn={signedIn} />
           </div>
-          <div>
-            <h2 className="font-serif text-xl text-ink">Images</h2>
-            <ul className="mt-3 space-y-2 text-xs leading-relaxed text-ink-muted">
-              {CREDITS.map((credit) => (
-                <li key={credit.subject}>
-                  {credit.subject}: {credit.artist},{' '}
-                  {credit.licenseUrl ? (
-                    <a href={credit.licenseUrl} className="underline decoration-line underline-offset-2 hover:text-ink">
-                      {credit.license}
-                    </a>
-                  ) : (
-                    credit.license
-                  )}
-                  , via{' '}
-                  <a href={credit.page} className="underline decoration-line underline-offset-2 hover:text-ink">
-                    Wikimedia Commons
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-ink-muted">
-              Images resized for the web. Śloka carousel adapted from{' '}
-              <a href="https://skiper-ui.com" className="underline decoration-line underline-offset-2 hover:text-ink">
-                Skiper UI
-              </a>
-              , built with{' '}
-              <a href="https://swiperjs.com" className="underline decoration-line underline-offset-2 hover:text-ink">
-                Swiper
-              </a>
-              .
-            </p>
-            <p className="mt-6 text-xs text-ink-muted">
-              Verses from Bhagavad-gītā As It Is and Śrīmad-Bhāgavatam, translations by His Divine Grace A. C.
-              Bhaktivedanta Swami Prabhupāda.
-            </p>
-          </div>
+          <p className="mt-8 font-serif text-lg italic text-ink-muted">Hare Kṛṣṇa.</p>
+          <p className="mt-6 text-xs text-ink-muted">
+            <Link to="/credits" className="underline decoration-line underline-offset-2 hover:text-peacock">
+              Image and design credits
+            </Link>
+          </p>
         </div>
       </footer>
     </div>

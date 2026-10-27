@@ -95,15 +95,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
       <form onSubmit={submit} noValidate className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-serif text-xl text-ink">Your details</h2>
-          <p className="text-xs text-ink-muted">
-            ID {profile.devoteeId}
-            {profile.group && (
-              <>
-                {' · '}
-                <span>{profile.group.name}</span>
-              </>
-            )}
-          </p>
+          <p className="text-xs text-ink-muted">ID {profile.devoteeId}</p>
         </div>
         <div>
           <p className="text-sm font-medium text-ink">{profile.name}</p>
@@ -134,7 +126,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
             Save profile
           </Button>
           {saved && (
-            <p role="status" className="text-sm font-medium text-peacock-text">
+            <p role="status" className="text-sm font-medium text-tulasi">
               Profile saved.
             </p>
           )}
@@ -249,7 +241,7 @@ function TargetsCard({ history }: { history: TargetHistory }) {
             Save target
           </Button>
           {saved && (
-            <p role="status" className="text-sm font-medium text-peacock-text">
+            <p role="status" className="text-sm font-medium text-tulasi">
               Target saved.
             </p>
           )}

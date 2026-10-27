@@ -66,26 +66,25 @@ Open **http://localhost:5173**. On Windows use PowerShell (`$env:VITE_API_MOCK="
 
 ### 7. Sign in
 
-Everyone signs in with a **mobile number or email** and a password. Demo accounts (password `haribol`):
+Everyone signs in with a **mobile number or email** and a password. There is no public sign-up: a coordinator or an administrator creates each account on the *Master admin* page and hands over its one-time password in person. Demo accounts (password `haribol`):
 
 | Who | Sign in with |
 |---|---|
 | Rādhikā Devī Dāsī, devotee | `98765 43210` or `radhika@example.org` |
-| Govinda Dāsa, coordinator of "Sharanagati" | `98450 00007` |
+| Govinda Dāsa, coordinator with record review | `98450 00007` |
+| Lalitā Devī Dāsī, coordinator without record review | `98450 00011` |
 | Nitāi Dāsa, administrator | `98450 00001` |
 | Mādhava Dāsa, newcomer with one-time password `temp-1234` | `98450 00108` — must then choose a password |
 
-Mobile numbers are matched loosely: `98765 43210`, `098765-43210` and `+91 98765 43210` are the same account. Devotee IDs (`SH-0042`…) identify people on rosters and reports but are never typed to sign in.
+Mobile numbers are matched loosely: `98765 43210`, `098765-43210` and `+91 98765 43210` are the same account. Devotee IDs (`SH-0042`…) identify people on the roster and in reports but are never typed to sign in.
 
-### Trying sign-up
+### Verification codes
 
-"Create an account" texts a six-digit code to the mobile number. In development no SMS is sent; the code appears in the **backend terminal**:
+A devotee changing their own mobile number is texted a six-digit code. In development no SMS is sent; the code appears in the **backend terminal**:
 
 ```
 SMS not sent (SMS_PROVIDER=log): Haribol! 931591 is your Sharanagati Sadhana Tracker code. It expires in 10 minutes.
 ```
-
-A new account waits for approval: sign in as the coordinator, open *Devotees & groups* and approve the join request.
 
 ### Frontend only (no backend)
 
@@ -93,7 +92,7 @@ A new account waits for approval: sign in as the coordinator, open *Devotees & g
 npm run dev:web            # http://localhost:5173 against built-in mocks (MSW); needs no backend
 ```
 
-Same demo accounts; data resets on reload; sign-up codes are printed in the browser console.
+Same demo accounts; data resets on reload; verification codes are printed in the browser console.
 
 ## Checking that everything works
 
@@ -135,11 +134,10 @@ With both servers running, open http://localhost:5173:
 2. **Devotee** — sign in with `98765 43210` / `haribol`. *Today* shows rings, streak and the week. *Record* saves today's rounds, reading and hearing; the dashboard then shows *Recorded*. *Week* and *History* show past days; days older than 7 are read-only.
 3. **Offline** — in the browser's developer tools set the network to *Offline*, save an entry: the badge shows *Offline · 1 pending*. Go back online and it syncs.
 4. **Profile** — the name is read-only; changing the mobile number asks for a verification code (printed in the backend terminal). Set a personal target from today onwards.
-5. **Coordinator** — sign out, sign in with `98450 00007`. *Group report* shows the week for the group's members; *Devotees & groups* creates groups, adds devotees and approves join requests.
-6. **Administrator** — sign in with `98450 00001`. Add a devotee (needs a mobile number) and hand over the one-time password; rename, deactivate or reset devotees from the roster; set the recommended target; read the audit log; export CSV or Excel.
+5. **Coordinator** — sign out, sign in with `98450 00007`. *Report* shows the congregation's week with a row per devotee (Govinda has record review; Lalitā, `98450 00011`, sees totals only). *Master admin* creates devotee accounts and hands over their one-time passwords; a coordinator cannot reset a coordinator's or administrator's password.
+6. **Administrator** — sign in with `98450 00001`. On *Master admin*, create coordinators as well as devotees, rename, deactivate, grant *Record review* to a coordinator, and answer password-reset requests. On *Administration*, set the recommended target and read the audit log. *Export* gives CSV or Excel.
 7. **Newcomer** — sign in with `98450 00108` / `temp-1234`: only the *Choose your own password* screen opens until a new password is set.
-8. **Sign-up** — *Create an account*, *Send code*, type the code from the backend terminal; the account waits for the coordinator's approval (step 5).
-9. **Sign out everywhere** — on *More*, ends the session on every device, not just this one.
+8. **Sign out everywhere** — on *More*, ends the session on every device, not just this one.
 
 ## Configuration
 
@@ -181,17 +179,17 @@ npm start
 
 ## Security notes
 
-- **Mobile numbers are verified.** Sign-up and any later change of number need a six-digit code texted to that number (10-minute expiry, 5 tries, one code a minute per number). A number can belong to one account only.
+- **No public sign-up.** Accounts are created by coordinators (devotees only) and administrators (any role), each with a generated one-time password that must be replaced at first sign-in. A devotee changing their own mobile number needs a six-digit code texted to it (10-minute expiry, 5 tries, one code a minute per number; signed-in devotees only). A number can belong to one account only.
 - **Sessions live in the database.** The cookie (HttpOnly, SameSite=Lax, Secure outside development, 14 days) carries only a signed session id. Signing out ends that session on the server, so a copied cookie is useless afterwards; "Sign out everywhere", a password change and an administrator issuing a one-time password end every session of the account.
 - Passwords: argon2id. A one-time password opens only the password screen until it is replaced (enforced by the API), and changing a password requires the current one.
-- **Rate limits** are counted in the database, so they hold across several API instances: 5 failed sign-ins per identifier and 30 per address per 15 minutes; 60 public requests (sign-up, codes, reset requests) per address per 15 minutes.
+- **Rate limits** are counted in the database, so they hold across several API instances: 5 failed sign-ins per identifier and 30 per address per 15 minutes; 30 reset requests or verification texts per address per 15 minutes.
 - **Cross-site requests** that would change state are refused by Fetch Metadata (`Sec-Fetch-Site`) or, failing that, by comparing `Origin` with the request's host (`X-Forwarded-Host` behind a trusted proxy), on top of the SameSite cookie. The content security policy allows no inline scripts or styles.
 - Request logs record method, URL and status only, never headers or cookies; unexpected errors are logged without query parameters. API responses are `Cache-Control: no-store`.
 - Devotees cannot rename themselves; administrators correct names from the roster, and the change is audited. New devotee IDs are random six-digit numbers.
-- Coordinators can place only devotees who have no group or are already in one of their groups. The last active administrator cannot be demoted or deactivated. Targets cannot be dated in the past. CSV exports defuse spreadsheet formulas.
+- Coordinators see the congregation's totals; a coordinator sees individual rows (numbers only, never reflections) only once an administrator grants them record review. Coordinators can create and reset devotee accounts only; other coordinators and administrators are administrators' business. The last active administrator cannot be demoted or deactivated. Targets cannot be dated in the past. CSV exports defuse spreadsheet formulas.
 - Signing out clears the browser's cached data and the offline queue (after confirming if entries haven't synced).
 
-Still open: a hostile party can make the API text codes to many numbers (bounded per address, but each SMS costs money) — put a CAPTCHA or an abuse-detecting SMS provider in front of `/api/auth/otp` if that becomes a problem.
+Verification texts can only be requested by signed-in devotees, so nobody outside the congregation can make the API spend SMS.
 
 ## Troubleshooting
 

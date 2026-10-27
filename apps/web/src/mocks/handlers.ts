@@ -24,39 +24,25 @@ import { http, HttpResponse } from 'msw'
 import {
   CONTACT_IN_USE,
   DevoteePatchSchema,
-  OtpRequestSchema,
-  VERIFICATION,
   NewDevoteeSchema,
-  NewGroupSchema,
+  OtpRequestSchema,
   ProfileInputSchema,
   PutEntrySchema,
   RemindersSchema,
-  SignupInputSchema,
+  VERIFICATION,
+  type Account as AccountView,
   type AuditEvent,
   type EntryRecord,
-  type Group,
-  type GroupReport,
-  type Member,
   type MemberWeek,
   type PendingReset,
   type Profile,
   type Reminders,
+  type Report,
 } from '../api/contract'
 import type { LoginInput } from '../auth/forms'
 import type { SessionUser } from '../auth/session'
 import { deviceTimeZone, todayLocalDate } from '../lib/clock'
-import {
-  ACCOUNTS,
-  AUDIT,
-  generatedEntry,
-  GROUPS,
-  PASSWORD,
-  PERSONAL,
-  RECOMMENDED,
-  RESET_REQUESTS,
-  type Account,
-  type GroupDef,
-} from '@sadhana/fixtures'
+import { ACCOUNTS, AUDIT, generatedEntry, PERSONAL, RECOMMENDED, RESET_REQUESTS, type Account } from '@sadhana/fixtures'
 
 export { PASSWORD, TEMPORARY_PASSWORD } from '@sadhana/fixtures'
 
@@ -76,6 +62,7 @@ const fixture = (devoteeId: string) => sessionUser(must(ACCOUNTS.find((account) 
 
 export const devotee = fixture('SH-0042')
 export const coordinator = fixture('SH-0007')
+export const coordinatorWithoutReview = fixture('SH-0011')
 export const admin = fixture('SH-0001')
 export const newcomer = fixture('SH-0108')
 
@@ -86,7 +73,6 @@ interface MockState {
   session: SessionUser | null
   failures: Map<string, number>
   accounts: Account[]
-  groups: GroupDef[]
   entries: Map<string, EntryRecord>
   seen: Map<string, EntryRecord>
   recommended: EffectiveTarget[]
@@ -118,7 +104,6 @@ const freshState = (): MockState => ({
   session: initialSession(),
   failures: new Map(),
   accounts: ACCOUNTS.map((account) => ({ ...account })),
-  groups: GROUPS.map((group) => ({ ...group })),
   entries: new Map(),
   seen: new Map(),
   recommended: [...RECOMMENDED],
@@ -146,19 +131,7 @@ export function seedEntry(devoteeId: string, entry: DailyEntry, updatedAt = `${e
   state.entries.set(`${devoteeId}|${entry.localDate}`, { ...entry, updatedAt })
 }
 
-export function seedPendingAccount(seed: Pick<Account, 'devoteeId' | 'name' | 'groupId' | 'phone'>) {
-  state.accounts.push({
-    ...seed,
-    role: 'DEVOTEE',
-    active: false,
-    pending: true,
-    mustChangePassword: false,
-    password: PASSWORD,
-    joinedAt: todayLocalDate(),
-  })
-}
-
-/** The code the mock last "texted", for tests and for trying the sign-up flow against the mocks. */
+/** The code the mock last "texted", for tests and for trying the flow against the mocks. */
 export const lastVerificationCode = (): string | undefined => state.lastCode
 
 export function savedEntry(devoteeId: string, localDate: LocalDate): EntryRecord | undefined {
@@ -180,7 +153,13 @@ const guard = (capability?: Capability): SessionUser | Response => {
 
 const accountOf = (devoteeId: string) => state.accounts.find((account) => account.devoteeId === devoteeId)
 const accountByIdentifier = ({ kind, value }: Identifier) => state.accounts.find((account) => account[kind] === value)
-const groupById = (groupId: string) => state.groups.find((group) => group.id === groupId)
+const activeAccounts = () => state.accounts.filter((account) => account.active)
+
+/** Administrators always see individual rows; a coordinator only once granted record review. */
+const mayReview = (user: SessionUser) => user.role === 'ADMIN' || accountOf(user.devoteeId)?.canReviewRecords === true
+
+/** Coordinators look after devotees; only administrators touch other coordinators and administrators. */
+const inCare = (user: SessionUser, account: { role: Account['role'] }) => user.role === 'ADMIN' || account.role === 'DEVOTEE'
 
 const contactIssues = (contact: { phone: string; email?: string }, exceptDevoteeId?: string) =>
   (['phone', 'email'] as const)
@@ -206,22 +185,6 @@ function codeProblem(phone: string, code: string | undefined): string | undefine
   state.codes.delete(phone)
   return undefined
 }
-const groupMembers = (groupId: string) => state.accounts.filter((account) => account.groupId === groupId)
-const activeMembers = (groupId: string) => groupMembers(groupId).filter((account) => account.active && !account.pending)
-
-const visibleGroups = (user: SessionUser) =>
-  state.groups.filter((group) => user.role === 'ADMIN' || group.coordinatorId === user.devoteeId)
-const canManage = (user: SessionUser, groupId: string) => visibleGroups(user).some((group) => group.id === groupId)
-
-const mayPlace = (user: SessionUser, account: Account) =>
-  user.role === 'ADMIN' || (account.role === 'DEVOTEE' && (account.groupId === null || canManage(user, account.groupId)))
-
-const groupSummary = (group: GroupDef): Group => ({
-  id: group.id,
-  name: group.name,
-  memberCount: activeMembers(group.id).length,
-  canReviewRecords: group.canReviewRecords,
-})
 
 function entryRecord(devoteeId: string, localDate: LocalDate): EntryRecord | undefined {
   const saved = state.entries.get(`${devoteeId}|${localDate}`)
@@ -254,15 +217,15 @@ const addTotals = (a: Target, b: Target): Target => ({
 const weekTarget = (history: TargetHistory, dates: LocalDate[]): Target =>
   dates.reduce((sum, date) => addTotals(sum, resolveTarget(history, date) ?? ZERO), ZERO)
 
-const member = (account: Account): Member => ({
+const accountView = (account: Account): AccountView => ({
   devoteeId: account.devoteeId,
   name: account.name,
   role: account.role,
   active: account.active,
-  pending: account.pending,
   joinedAt: account.joinedAt,
   phone: account.phone,
   email: account.email,
+  canReviewRecords: account.canReviewRecords,
 })
 
 function memberWeek(account: Account, dates: LocalDate[]): MemberWeek {
@@ -278,13 +241,12 @@ function memberWeek(account: Account, dates: LocalDate[]): MemberWeek {
   }
 }
 
-function groupReport(group: GroupDef, weekStart: LocalDate): GroupReport {
+function congregationReport(weekStart: LocalDate, withRows: boolean): Report {
   const dates = weekDates(weekStart)
-  const weeks = activeMembers(group.id).map((account) => memberWeek(account, dates))
+  const weeks = activeAccounts().map((account) => memberWeek(account, dates))
   const average = (key: keyof Target) =>
     weeks.length ? Math.round(weeks.reduce((sum, week) => sum + week.completion[key], 0) / weeks.length) : 0
   return {
-    group: { id: group.id, name: group.name },
     week: weekRangeOf(weekStart),
     summary: {
       members: weeks.length,
@@ -297,7 +259,7 @@ function groupReport(group: GroupDef, weekStart: LocalDate): GroupReport {
         hearingMinutes: average('hearingMinutes'),
       },
     },
-    ...(group.canReviewRecords && { members: weeks }),
+    ...(withRows && { members: weeks }),
   }
 }
 
@@ -307,7 +269,6 @@ const profileOf = (account: Account): Profile => ({
   phone: account.phone,
   email: account.email,
   address: account.address,
-  group: account.groupId ? { id: account.groupId, name: must(groupById(account.groupId)).name } : null,
 })
 
 const remindersOf = (devoteeId: string): Reminders =>
@@ -326,21 +287,13 @@ function audit(user: SessionUser, action: string, subject?: string, details?: st
 
 const label = (account: Account) => `${account.name} (${account.devoteeId})`
 
-const slug = (name: string) =>
-  name
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'group'
-
 const csvLine = (cells: (string | number)[]) =>
   cells.map((cell) => (typeof cell === 'string' && /[",\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell)).join(',')
 
-function exportCsv(group: GroupDef, from: LocalDate, to: LocalDate): string {
+function exportCsv(from: LocalDate, to: LocalDate, individual: boolean): string {
   const lines: string[] = []
-  const members = activeMembers(group.id)
-  if (group.canReviewRecords) {
+  const members = activeAccounts()
+  if (individual) {
     lines.push(csvLine(['devoteeId', 'name', 'date', 'status', 'rounds', 'readingMinutes', 'hearingMinutes']))
     for (const account of members) {
       for (let date = from; date <= to; date = addDays(date, 1)) {
@@ -362,8 +315,6 @@ function exportCsv(group: GroupDef, from: LocalDate, to: LocalDate): string {
   return `${lines.join('\n')}\n`
 }
 
-const refusal = (reason: 'PENDING' | 'INACTIVE') => HttpResponse.json({ reason }, { status: 403 })
-
 export const handlers = [
   http.get('/api/auth/session', () => (state.session ? HttpResponse.json({ user: state.session }) : status(401))),
 
@@ -377,8 +328,7 @@ export const handlers = [
       state.failures.set(key, (state.failures.get(key) ?? 0) + 1)
       return status(401)
     }
-    if (account.pending) return refusal('PENDING')
-    if (!account.active) return refusal('INACTIVE')
+    if (!account.active) return HttpResponse.json({ reason: 'INACTIVE' }, { status: 403 })
     state.failures.delete(key)
     state.session = sessionUser(account)
     persistSession()
@@ -398,6 +348,8 @@ export const handlers = [
   }),
 
   http.post('/api/auth/otp', async ({ request }) => {
+    const user = guard()
+    if (user instanceof Response) return user
     const parsed = OtpRequestSchema.safeParse(await request.json())
     if (!parsed.success) return status(400)
     const issues = contactIssues({ phone: parsed.data.phone })
@@ -432,34 +384,6 @@ export const handlers = [
     }
     return status(202)
   }),
-
-  http.post('/api/auth/signup', async ({ request }) => {
-    const parsed = SignupInputSchema.safeParse(await request.json())
-    if (!parsed.success || !groupById(parsed.data.groupId)) return status(400)
-    const issues = contactIssues(parsed.data)
-    if (issues.length) return conflict(issues)
-    const problem = codeProblem(parsed.data.phone, parsed.data.code)
-    if (problem) return refuseCode(problem)
-    const account: Account = {
-      devoteeId: `SH-${100000 + state.nextId++}`,
-      name: parsed.data.name,
-      role: 'DEVOTEE',
-      active: false,
-      pending: true,
-      mustChangePassword: false,
-      password: parsed.data.password,
-      groupId: parsed.data.groupId,
-      joinedAt: todayLocalDate(),
-      phone: parsed.data.phone,
-      email: parsed.data.email,
-    }
-    state.accounts.push(account)
-    return HttpResponse.json({ devoteeId: account.devoteeId }, { status: 201 })
-  }),
-
-  http.get('/api/groups/public', () =>
-    HttpResponse.json({ groups: state.groups.map(({ id, name }) => ({ id, name })) }),
-  ),
 
   http.get('/api/me/entries', ({ request }) => {
     const user = guard()
@@ -542,125 +466,47 @@ export const handlers = [
     return HttpResponse.json({ reminders: parsed.data })
   }),
 
-  http.get('/api/groups', () => {
-    const user = guard('VIEW_GROUP_REPORTS')
+  http.get('/api/report', ({ request }) => {
+    const user = guard('VIEW_REPORTS')
     if (user instanceof Response) return user
-    return HttpResponse.json({ groups: visibleGroups(user).map(groupSummary) })
-  }),
-
-  http.post('/api/groups', async ({ request }) => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    const parsed = NewGroupSchema.safeParse(await request.json())
-    if (!parsed.success) return status(400)
-    const base = slug(parsed.data.name)
-    let id = base
-    for (let suffix = 2; groupById(id); suffix += 1) id = `${base}-${suffix}`
-    const group: GroupDef = { id, name: parsed.data.name, coordinatorId: user.devoteeId, canReviewRecords: false }
-    state.groups.push(group)
-    audit(user, 'GROUP_CREATED', group.name)
-    return HttpResponse.json({ group: groupSummary(group) }, { status: 201 })
-  }),
-
-  http.get('/api/devotees', () => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    return HttpResponse.json({
-      devotees: state.accounts
-        .filter((account) => account.active && !account.pending && mayPlace(user, account))
-        .map(({ devoteeId, name, groupId }) => ({ devoteeId, name, groupId })),
-    })
-  }),
-
-  http.get('/api/groups/:id/report', ({ request, params }) => {
-    const user = guard('VIEW_GROUP_REPORTS')
-    if (user instanceof Response) return user
-    const group = groupById(String(params['id']))
-    if (!group || !canManage(user, group.id)) return status(403)
     const week = new URL(request.url).searchParams.get('week') ?? weekRangeOf(todayLocalDate()).start
-    return HttpResponse.json({ report: groupReport(group, weekRangeOf(week).start) })
+    return HttpResponse.json({ report: congregationReport(weekRangeOf(week).start, mayReview(user)) })
   }),
 
-  http.get('/api/groups/:id/members', ({ params }) => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    const groupId = String(params['id'])
-    if (!canManage(user, groupId)) return status(403)
-    return HttpResponse.json({ members: groupMembers(groupId).map(member) })
-  }),
-
-  http.put('/api/groups/:id/members/:devoteeId', ({ params }) => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    const group = groupById(String(params['id']))
-    if (!group || !canManage(user, group.id)) return status(403)
-    const account = accountOf(String(params['devoteeId']))
-    if (!account) return status(404)
-    if (!mayPlace(user, account)) return status(403)
-    account.groupId = group.id
-    audit(user, 'GROUP_CHANGED', label(account), group.name)
-    return status(204)
-  }),
-
-  http.delete('/api/groups/:id/members/:devoteeId', ({ params }) => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    const groupId = String(params['id'])
-    if (!canManage(user, groupId)) return status(403)
-    const account = accountOf(String(params['devoteeId']))
-    if (!account || account.groupId !== groupId) return status(404)
-    if (account.pending) {
-      state.accounts.splice(state.accounts.indexOf(account), 1)
-      audit(user, 'JOIN_REQUEST_DECLINED', label(account))
-    } else {
-      account.groupId = null
-      audit(user, 'GROUP_CHANGED', label(account), 'No group')
-    }
-    return status(204)
-  }),
-
-  http.post('/api/groups/:id/members/:devoteeId/approve', ({ params }) => {
-    const user = guard('MANAGE_ROSTER')
-    if (user instanceof Response) return user
-    const groupId = String(params['id'])
-    if (!canManage(user, groupId)) return status(403)
-    const account = accountOf(String(params['devoteeId']))
-    if (!account || account.groupId !== groupId || !account.pending) return status(404)
-    account.pending = false
-    account.active = true
-    audit(user, 'ACCOUNT_APPROVED', label(account), must(groupById(groupId)).name)
-    return status(204)
-  }),
-
-  http.get('/api/groups/:id/export', ({ request, params }) => {
+  http.get('/api/export', ({ request }) => {
     const user = guard('EXPORT_REPORTS')
     if (user instanceof Response) return user
-    const group = groupById(String(params['id']))
-    if (!group || !canManage(user, group.id)) return status(403)
     const url = new URL(request.url)
     const from = url.searchParams.get('from')
     const to = url.searchParams.get('to')
     if (!from || !to) return status(400)
     if (url.searchParams.get('format') === 'xlsx') return status(501)
-    return new HttpResponse(exportCsv(group, from, to), {
+    return new HttpResponse(exportCsv(from, to, mayReview(user)), {
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="sadhana-${group.id}-${from}-${to}.csv"`,
+        'Content-Disposition': `attachment; filename="sadhana-${from}-${to}.csv"`,
       },
     })
   }),
 
-  http.get('/api/admin/reset-requests', () => {
-    const user = guard('ADMINISTER')
+  http.get('/api/devotees', () => {
+    const user = guard('MANAGE_ACCOUNTS')
     if (user instanceof Response) return user
-    return HttpResponse.json({ requests: state.resetRequests })
+    return HttpResponse.json({ devotees: state.accounts.map(accountView) })
   }),
 
-  http.post('/api/admin/devotees', async ({ request }) => {
-    const user = guard('ADMINISTER')
+  http.get('/api/devotees/reset-requests', () => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    return HttpResponse.json({ requests: state.resetRequests.filter((pending) => inCare(user, must(accountOf(pending.devoteeId)))) })
+  }),
+
+  http.post('/api/devotees', async ({ request }) => {
+    const user = guard('MANAGE_ACCOUNTS')
     if (user instanceof Response) return user
     const parsed = NewDevoteeSchema.safeParse(await request.json())
     if (!parsed.success) return status(400)
+    if (!inCare(user, parsed.data)) return status(403)
     const issues = contactIssues(parsed.data)
     if (issues.length) return conflict(issues)
     const temporaryPassword = `hari-${state.nextId}`
@@ -669,25 +515,19 @@ export const handlers = [
       name: parsed.data.name,
       role: parsed.data.role,
       active: true,
-      pending: false,
       mustChangePassword: true,
       password: temporaryPassword,
-      groupId: parsed.data.groupId,
       joinedAt: todayLocalDate(),
       phone: parsed.data.phone,
       email: parsed.data.email,
+      canReviewRecords: false,
     }
     state.accounts.push(account)
-    audit(
-      user,
-      'ACCOUNT_CREATED',
-      label(account),
-      `${parsed.data.role}${account.groupId ? `, ${must(groupById(account.groupId)).name}` : ''}`,
-    )
-    return HttpResponse.json({ devotee: member(account), temporaryPassword }, { status: 201 })
+    audit(user, 'ACCOUNT_CREATED', label(account), parsed.data.role)
+    return HttpResponse.json({ devotee: accountView(account), temporaryPassword }, { status: 201 })
   }),
 
-  http.patch('/api/admin/devotees/:id', async ({ request, params }) => {
+  http.patch('/api/devotees/:id', async ({ request, params }) => {
     const user = guard('ADMINISTER')
     if (user instanceof Response) return user
     const account = accountOf(String(params['id']))
@@ -700,18 +540,19 @@ export const handlers = [
     if (parsed.data.name && parsed.data.name !== account.name) {
       audit(user, 'NAME_CHANGED', label({ ...account, name: parsed.data.name }), `was ${account.name}`)
     }
-    if (parsed.data.groupId !== undefined && parsed.data.groupId !== account.groupId) {
-      audit(user, 'GROUP_CHANGED', label(account), parsed.data.groupId ?? 'No group')
+    if (parsed.data.canReviewRecords !== undefined && parsed.data.canReviewRecords !== account.canReviewRecords) {
+      audit(user, parsed.data.canReviewRecords ? 'RECORD_REVIEW_GRANTED' : 'RECORD_REVIEW_REVOKED', label(account))
     }
     Object.assign(account, parsed.data)
-    return HttpResponse.json({ devotee: member(account) })
+    return HttpResponse.json({ devotee: accountView(account) })
   }),
 
-  http.post('/api/admin/devotees/:id/reset-password', ({ params }) => {
-    const user = guard('ADMINISTER')
+  http.post('/api/devotees/:id/reset-password', ({ params }) => {
+    const user = guard('MANAGE_ACCOUNTS')
     if (user instanceof Response) return user
     const account = accountOf(String(params['id']))
     if (!account) return status(404)
+    if (!inCare(user, account)) return status(403)
     const temporaryPassword = `hari-${state.nextId++}`
     account.mustChangePassword = true
     account.password = temporaryPassword

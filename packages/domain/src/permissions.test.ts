@@ -8,8 +8,8 @@ describe('hasCapability', () => {
     expect(hasCapability('ADMIN', 'TRACK_SADHANA')).toBe(true)
   })
 
-  it('reserves group reports, roster and export for coordinators and admins', () => {
-    for (const capability of ['VIEW_GROUP_REPORTS', 'MANAGE_ROSTER', 'EXPORT_REPORTS'] as const) {
+  it('reserves reports, accounts and export for coordinators and admins', () => {
+    for (const capability of ['VIEW_REPORTS', 'MANAGE_ACCOUNTS', 'EXPORT_REPORTS'] as const) {
       expect(hasCapability('DEVOTEE', capability)).toBe(false)
       expect(hasCapability('COORDINATOR', capability)).toBe(true)
       expect(hasCapability('ADMIN', capability)).toBe(true)

@@ -111,12 +111,12 @@ describe('targets', () => {
 describe('profile', () => {
   it('reads the profile and updates contact details, dropping blank optional fields', async () => {
     const { body } = await agent.get('/api/me/profile').expect(200)
-    expect(body.profile).toMatchObject({
+    expect(body.profile).toEqual({
       devoteeId: 'SH-0042',
       name: 'Rādhikā Devī Dāsī',
       phone: '+919876543210',
       email: 'radhika@example.org',
-      group: { id: 'sharanagati', name: 'Sharanagati' },
+      address: 'Sharanagati, Bengaluru',
     })
     const updated = await agent.put('/api/me/profile').send({ phone: '98765 43210', email: '', address: '' }).expect(200)
     expect(updated.body.profile.email).toBeUndefined()
@@ -126,7 +126,7 @@ describe('profile', () => {
   it('changes the mobile number only with a code sent to the new one', async () => {
     const unverified = await agent.put('/api/me/profile').send({ phone: '90000 00000', email: '' }).expect(400)
     expect(unverified.body.issues).toEqual([{ path: ['code'], message: 'Verify your new mobile number with the code we sent' }])
-    const code = await verifiedCode(ctx, '90000 00000')
+    const code = await verifiedCode(ctx, agent, '90000 00000')
     const updated = await agent.put('/api/me/profile').send({ phone: '90000 00000', email: '', code }).expect(200)
     expect(updated.body.profile.phone).toBe('+919000000000')
     await request(ctx.app).post('/api/auth/login').send({ identifier: '90000 00000', password: 'haribol' }).expect(200)

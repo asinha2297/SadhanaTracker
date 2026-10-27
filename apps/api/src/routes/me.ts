@@ -5,8 +5,6 @@ import { Router } from 'express'
 import { z } from 'zod'
 import type { AppContext } from '../app'
 import { requireAuth } from '../auth/middleware'
-import type { Db } from '../db/client'
-import { findGroup } from '../db/queries'
 import { accounts, entries, idempotencyKeys, reminders, targetChoices, type AccountRow } from '../db/schema'
 import { HttpError, validate } from '../http/errors'
 import { todayIn } from '../lib/dates'
@@ -18,17 +16,13 @@ import { assertNotPast, targetHistory } from '../services/targets'
 const RangeSchema = z.object({ from: LocalDateSchema, to: LocalDateSchema })
 const MAX_IDEMPOTENCY_KEY = 128
 
-async function profileOf(db: Db, account: AccountRow): Promise<Profile> {
-  const group = account.groupId ? await findGroup(db, account.groupId) : undefined
-  return {
-    devoteeId: account.devoteeId,
-    name: account.name,
-    phone: account.phone,
-    email: account.email ?? undefined,
-    address: account.address ?? undefined,
-    group: group ? { id: group.id, name: group.name } : null,
-  }
-}
+const profileOf = (account: AccountRow): Profile => ({
+  devoteeId: account.devoteeId,
+  name: account.name,
+  phone: account.phone,
+  email: account.email ?? undefined,
+  address: account.address ?? undefined,
+})
 
 const remindersOf = (row: typeof reminders.$inferSelect | undefined, account: AccountRow): Reminders =>
   row
@@ -115,7 +109,7 @@ export function meRoutes(ctx: AppContext): Router {
   })
 
   router.get('/profile', async (req, res) => {
-    res.json({ profile: await profileOf(ctx.db, req.account) })
+    res.json({ profile: profileOf(req.account) })
   })
 
   router.put('/profile', async (req, res) => {
@@ -133,7 +127,7 @@ export function meRoutes(ctx: AppContext): Router {
       .where(eq(accounts.devoteeId, req.account.devoteeId))
       .returning()
     if (!updated) throw new HttpError(404)
-    res.json({ profile: await profileOf(ctx.db, updated) })
+    res.json({ profile: profileOf(updated) })
   })
 
   router.get('/reminders', async (req, res) => {

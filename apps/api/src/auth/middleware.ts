@@ -17,7 +17,7 @@ export const requireAuth =
     const token = (req.cookies as Record<string, string | undefined>)[SESSION_COOKIE]
     const sessionId = token ? await readToken(token, ctx.config.sessionSecret) : undefined
     const account = sessionId ? await accountForSession(ctx.db, sessionId) : undefined
-    if (!sessionId || !account || !account.active || account.pending) throw new HttpError(401)
+    if (!sessionId || !account || !account.active) throw new HttpError(401)
     if (account.mustChangePassword && !options.allowPasswordChange) throw new HttpError(403, { reason: 'PASSWORD_CHANGE_REQUIRED' })
     req.account = account
     req.sessionId = sessionId

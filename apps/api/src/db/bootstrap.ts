@@ -15,7 +15,6 @@ export async function bootstrapAdmin(db: Db, config: Config, logger: Logger): Pr
     role: 'ADMIN',
     mustChangePassword: true,
     passwordHash: await hashPassword(config.bootstrapAdmin.password, config.argon),
-    groupId: null,
     joinedAt: todayIn('Asia/Kolkata'),
     phone: config.bootstrapAdmin.phone,
   })

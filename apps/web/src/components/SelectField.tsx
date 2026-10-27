@@ -19,7 +19,7 @@ export function SelectField({ id, label, error, children, ...select }: SelectFie
       >
         {children}
       </select>
-      {error && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-1.5 text-sm text-red-700">{error}</p>}
     </div>
   )
 }

@@ -104,7 +104,7 @@ function RemindersForm({ reminders }: { reminders: Reminders }) {
             Save reminders
           </Button>
           {saved && (
-            <p role="status" className="text-sm font-medium text-peacock-text">
+            <p role="status" className="text-sm font-medium text-tulasi">
               Reminders saved.
             </p>
           )}

@@ -16,7 +16,7 @@ export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line bg-card/60 px-4 py-7 backdrop-blur-2xl md:flex">
       <div className="px-3">
-        <Wordmark />
+        <Wordmark tagline={false} />
       </div>
       <nav aria-label="Main navigation" className="mt-9 flex-1 space-y-7 overflow-y-auto">
         {[...groupBySection(items)].map(([section, sectionItems]) => (
@@ -30,7 +30,7 @@ export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }
                     end={to === '/'}
                     className={({ isActive }) =>
                       `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive ? 'bg-saffron/10 text-saffron-text' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+                        isActive ? 'bg-saffron/10 text-saffron-text' : 'text-ink-muted hover:bg-peacock/8 hover:text-peacock'
                       }`
                     }
                   >
@@ -51,8 +51,8 @@ export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }
         <p className="text-xs text-ink-muted">{ROLE_LABELS[user.role]}</p>
         <div className="mt-3">
           <SignOutButton
-            className="text-left text-xs font-medium text-ink-muted transition-colors hover:text-ink"
-            everywhereClassName="text-left text-xs text-ink-muted/80 transition-colors hover:text-ink"
+            className="text-left text-xs font-medium text-ink-muted transition-colors hover:text-peacock"
+            everywhereClassName="text-left text-xs text-ink-muted transition-colors hover:text-peacock"
           />
         </div>
       </footer>

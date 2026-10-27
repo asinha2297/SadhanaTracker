@@ -13,7 +13,7 @@ export function Ring({ percent, label, caption }: { percent: number; label: stri
           cx="40"
           cy="40"
           r={RADIUS}
-          className={`fill-none ${percent >= 100 ? 'stroke-peacock' : 'stroke-saffron'}`}
+          className={`fill-none ${percent >= 100 ? 'stroke-tulasi' : 'stroke-saffron'}`}
           strokeWidth="8"
           strokeLinecap="round"
           transform="rotate(-90 40 40)"

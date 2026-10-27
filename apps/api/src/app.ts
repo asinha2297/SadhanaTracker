@@ -10,9 +10,9 @@ import { rejectCrossSite } from './http/csrf'
 import { errorHandler, notFound } from './http/errors'
 import type { Logger } from './logger'
 import { adminRoutes } from './routes/admin'
-import { devoteeRoutes, groupRoutes } from './routes/groups'
+import { devoteeRoutes } from './routes/devotees'
 import { meRoutes } from './routes/me'
-import { publicRoutes } from './routes/public'
+import { reportRoutes } from './routes/report'
 import type { SmsSender } from './services/sms'
 
 export interface AppContext {
@@ -68,8 +68,7 @@ export function createApp(ctx: AppContext): Express {
   })
   app.use('/api/auth', authRoutes(ctx))
   app.use('/api/me', meRoutes(ctx))
-  app.use('/api', publicRoutes(ctx))
-  app.use('/api/groups', groupRoutes(ctx))
+  app.use('/api', reportRoutes(ctx))
   app.use('/api/devotees', devoteeRoutes(ctx))
   app.use('/api/admin', adminRoutes(ctx))
   app.use('/api', notFound)

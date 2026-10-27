@@ -62,7 +62,7 @@ function Row({
       className="grid grid-cols-[1fr_auto] gap-3 rounded-xl border border-line p-3"
     >
       <div className={`grid gap-3 ${columns}`}>{children}</div>
-      <button type="button" aria-label={removeLabel} onClick={onRemove} className="self-start pt-1 text-ink-muted hover:text-ink">
+      <button type="button" aria-label={removeLabel} onClick={onRemove} className="self-start pt-1 text-ink-muted hover:text-peacock">
         <X className="size-4" aria-hidden />
       </button>
     </motion.div>

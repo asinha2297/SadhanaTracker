@@ -11,7 +11,7 @@ export function MoreScreen() {
     <section className="py-6">
       <h1 className="font-serif text-3xl text-ink">More</h1>
       <p className="mt-1 text-sm text-ink-muted">{user.name}</p>
-      <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sm">
+      <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-card">
         {items.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             <Link to={to} className="flex items-center gap-4 px-4 py-3.5 text-sm font-medium text-ink">
@@ -24,7 +24,7 @@ export function MoreScreen() {
       </ul>
       <div className="mt-6">
         <SignOutButton
-          className="w-full rounded-2xl bg-card px-4 py-3.5 text-sm font-medium text-ink-muted shadow-sm"
+          className="w-full rounded-2xl bg-card px-4 py-3.5 text-sm font-medium text-ink-muted shadow-card"
           everywhereClassName="w-full py-2 text-center text-xs font-medium text-ink-muted"
         />
       </div>

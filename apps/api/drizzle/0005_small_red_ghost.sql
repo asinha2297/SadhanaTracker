@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "can_review_records" boolean DEFAULT false NOT NULL;

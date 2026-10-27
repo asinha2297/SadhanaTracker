@@ -77,7 +77,7 @@ export function HistoryScreen() {
           <li key={date}>
             <Link
               to={`/entry/${date}`}
-              className="flex items-start gap-4 rounded-2xl border border-line bg-card px-4 py-3 transition-colors hover:border-saffron/40"
+              className="flex items-start gap-4 rounded-2xl border border-line bg-card px-4 py-3 transition-colors hover:border-peacock/40"
             >
               <div className="w-14 shrink-0">
                 <p className="font-medium text-ink">{shortDate(date)}</p>

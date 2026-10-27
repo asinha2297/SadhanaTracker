@@ -34,11 +34,11 @@ function MalaRing({ reduced }: { reduced: boolean }) {
       <defs>
         <radialGradient id="mala-bead" cx="35%" cy="30%" r="75%">
           <stop offset="0%" stopColor="#fde7b0" />
-          <stop offset="55%" stopColor="#d97706" />
-          <stop offset="100%" stopColor="#7c2d12" />
+          <stop offset="55%" stopColor="#e87a00" />
+          <stop offset="100%" stopColor="#8a3a00" />
         </radialGradient>
       </defs>
-      <circle cx="200" cy="200" r={RADIUS} fill="none" stroke="#d97706" strokeOpacity="0.35" strokeWidth="0.8" />
+      <circle cx="200" cy="200" r={RADIUS} fill="none" stroke="#d35400" strokeOpacity="0.35" strokeWidth="0.8" />
       <g opacity="0.85">
         {BEADS.map((bead, index) => (
           <circle key={index} cx={bead.x} cy={bead.y} r={index === 0 ? 6.5 : bead.big ? 4.6 : 2.9} fill="url(#mala-bead)" />
@@ -87,7 +87,7 @@ function Portrait() {
       >
         <motion.div
           aria-hidden
-          className="absolute -inset-[14%] rounded-full bg-[radial-gradient(circle,rgb(217_119_6/0.34),rgb(217_119_6/0.1)_42%,transparent_68%)] blur-2xl"
+          className="absolute -inset-[14%] rounded-full bg-[radial-gradient(circle,rgb(232_122_0/0.3),rgb(232_122_0/0.1)_42%,transparent_68%)] blur-2xl"
           animate={reduced ? undefined : { scale: [1, 1.07, 1], opacity: [0.75, 1, 0.75] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -104,8 +104,9 @@ function Portrait() {
             className="absolute inset-[13%] m-0"
           >
             {!reduced && <div aria-hidden className="portrait-sweep absolute -inset-[5px] rounded-full" />}
-            <div className="relative h-full w-full rounded-full bg-gradient-to-br from-[#f2b04a] via-[#d97706]/50 to-[#f2b04a] p-[3px] shadow-[0_40px_90px_-35px_rgb(124_45_18/0.7)]">
-              <div className="h-full w-full overflow-hidden rounded-full bg-[#0f3d3a]">
+            {/* A marigold ring with a white keyline inside it, so the portrait sits cleanly on the sandalwood page. */}
+            <div className="relative h-full w-full rounded-full bg-gradient-to-br from-[#e87a00] via-[#f2b04a] to-[#d35400] p-[3px] shadow-[0_40px_90px_-35px_rgb(138_58_0/0.55)]">
+              <div className="h-full w-full overflow-hidden rounded-full border-[3px] border-card bg-card">
                 <img
                   src={HERO_PORTRAIT.src}
                   alt={HERO_PORTRAIT.alt}
@@ -119,7 +120,7 @@ function Portrait() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.3, duration: 0.6, ease: 'easeOut' }}
-                className="rounded-full border border-line bg-card/90 px-4 py-1.5 text-center shadow-lg backdrop-blur-xl"
+                className="rounded-full border border-line bg-card px-4 py-1.5 text-center shadow-card"
               >
                 <span className="block font-serif text-[15px] leading-tight text-ink">Śrīla Prabhupāda</span>
                 <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-saffron-text">
@@ -147,7 +148,7 @@ function Portrait() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1, duration: 0.7, ease: 'easeOut' }}
-        className="absolute -left-4 bottom-0 max-w-xs rounded-2xl border border-line bg-card/90 p-5 shadow-xl backdrop-blur-xl md:-left-16"
+        className="absolute -left-4 bottom-0 max-w-xs rounded-2xl border border-line bg-card p-5 shadow-float md:-left-16"
       >
         <blockquote className="font-serif text-lg italic leading-snug text-ink">
           {HERO_SLOKA.sanskrit.map((line) => (
@@ -176,7 +177,7 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
       <motion.div
         aria-hidden
         style={{ y: glowY }}
-        className="pointer-events-none absolute -top-40 right-[-10%] h-[36rem] w-[36rem] rounded-full bg-[radial-gradient(circle,rgb(217_119_6/0.22),transparent_65%)]"
+        className="pointer-events-none absolute -top-40 right-[-10%] h-[36rem] w-[36rem] rounded-full bg-[radial-gradient(circle,rgb(232_122_0/0.2),transparent_65%)]"
       />
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-14 md:grid-cols-[1.1fr_1fr] md:pb-28 md:pt-24">
         <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">

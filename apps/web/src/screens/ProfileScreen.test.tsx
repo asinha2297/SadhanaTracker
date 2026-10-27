@@ -12,7 +12,7 @@ describe('ProfileScreen', () => {
     renderAt('/profile')
     const main = within(await screen.findByRole('main'))
     expect(await main.findByText('Rādhikā Devī Dāsī')).toBeInTheDocument()
-    expect(main.getByText('Sharanagati')).toBeInTheDocument()
+    expect(main.getByText('ID SH-0042')).toBeInTheDocument()
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
     expect(main.getByText(/administrator can correct your name/i)).toBeInTheDocument()
     const user = userEvent.setup()

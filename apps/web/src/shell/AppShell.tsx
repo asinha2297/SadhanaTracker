@@ -14,7 +14,7 @@ export function AppShell() {
       <Sidebar items={items} user={user} />
       <div className="flex min-h-dvh flex-col">
         <header className="flex items-center justify-between px-5 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))] md:hidden">
-          <Wordmark />
+          <Wordmark tagline={false} />
           <SyncBadge />
         </header>
         <main className="flex-1 px-5 pb-28 md:px-10 md:pb-10">

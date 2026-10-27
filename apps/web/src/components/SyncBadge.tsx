@@ -9,7 +9,7 @@ export function SyncBadge() {
     ? { label: queue.length ? `Offline · ${queue.length} pending` : 'Offline', dot: 'bg-ink-muted', pulse: true }
     : queue.length
       ? { label: `Pending sync · ${queue.length}`, dot: 'bg-saffron', pulse: true }
-      : { label: 'Synced', dot: 'bg-peacock', pulse: false }
+      : { label: 'Synced', dot: 'bg-tulasi', pulse: false }
   return (
     <span
       role="status"

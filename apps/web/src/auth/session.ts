@@ -1,6 +1,6 @@
-import { SessionUserSchema, type LoginInput, type SessionUser, type SignupInput } from '@sadhana/contract'
+import { SessionUserSchema, type LoginInput, type SessionUser } from '@sadhana/contract'
 import { z } from 'zod'
-import { api, ApiError, requestJson } from '../api/client'
+import { api, ApiError } from '../api/client'
 
 export type { SessionUser }
 
@@ -41,9 +41,4 @@ export async function requestCode(phone: string): Promise<void> {
 
 export async function requestReset(identifier: string): Promise<void> {
   await api('/api/auth/reset-request', { method: 'POST', body: { identifier } })
-}
-
-export async function signup(input: SignupInput): Promise<string> {
-  return (await requestJson('/api/auth/signup', z.object({ devoteeId: z.string() }), { method: 'POST', body: input }))
-    .devoteeId
 }

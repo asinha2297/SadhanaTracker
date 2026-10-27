@@ -130,7 +130,7 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
             Save recommended target
           </Button>
           {saved && (
-            <p role="status" className="text-sm font-medium text-peacock-text">
+            <p role="status" className="text-sm font-medium text-tulasi">
               Recommended target saved.
             </p>
           )}

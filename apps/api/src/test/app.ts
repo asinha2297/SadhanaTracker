@@ -36,9 +36,9 @@ export async function signedIn(ctx: TestContext, devoteeId: string, password = P
   return agent
 }
 
-/** Requests a verification code for `phone` and reads it back from the SMS the app sent. */
-export async function verifiedCode(ctx: TestContext, phone: string): Promise<string> {
-  await request(ctx.app).post('/api/auth/otp').send({ phone }).expect(202)
+/** Has the signed-in `agent` request a verification code for `phone`, and reads it back from the SMS the app sent. */
+export async function verifiedCode(ctx: TestContext, agent: Agent, phone: string): Promise<string> {
+  await agent.post('/api/auth/otp').send({ phone }).expect(202)
   const code = /\b(\d{6})\b/.exec(ctx.sms.at(-1)?.message ?? '')?.[1]
   if (!code) throw new Error(`No code was sent to ${phone}`)
   return code

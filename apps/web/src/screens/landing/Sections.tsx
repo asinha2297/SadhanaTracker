@@ -99,7 +99,7 @@ export function Practices() {
       />
       <motion.ul variants={stagger} initial="hidden" whileInView="show" viewport={inView} className="mt-12 grid gap-6 md:grid-cols-3">
         {PRACTICES.map((practice) => (
-          <motion.li key={practice.title} variants={rise} className="group overflow-hidden rounded-3xl border border-line bg-card shadow-sm">
+          <motion.li key={practice.title} variants={rise} className="group overflow-hidden rounded-3xl border border-line bg-card shadow-card">
             <div className="overflow-hidden">
               <img
                 src={practice.image}
@@ -164,9 +164,9 @@ export function HowItWorks() {
 
 function QuoteCard({ text, source }: { text: string; source: string }) {
   return (
-    <figure className="w-[22rem] shrink-0 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-      <blockquote className="font-serif text-xl italic leading-snug text-[#f3efe8]">“{text}”</blockquote>
-      <figcaption className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f2b04a]">{source}</figcaption>
+    <figure className="w-[22rem] shrink-0 rounded-3xl border border-line bg-card p-6 shadow-card">
+      <blockquote className="font-serif text-xl italic leading-snug text-ink">“{text}”</blockquote>
+      <figcaption className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-saffron-text">{source}</figcaption>
     </figure>
   )
 }
@@ -174,13 +174,13 @@ function QuoteCard({ text, source }: { text: string; source: string }) {
 export function PrabhupadaQuotes() {
   const reduced = usePrefersReducedMotion()
   return (
-    <section className="overflow-hidden bg-[#0f1115] py-16 text-[#f3efe8] md:py-24">
+    <section className="overflow-hidden py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-5">
         <div className="grid items-end gap-8 md:grid-cols-[1fr_auto]">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f2b04a]">Śrīla Prabhupāda's words</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight md:text-5xl">The standard was set with love.</h2>
-            <p className="mt-4 text-lg leading-relaxed text-[#a8a29e]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-peacock">Śrīla Prabhupāda's words</p>
+            <h2 className="mt-3 font-serif text-4xl leading-tight text-ink md:text-5xl">The standard was set with love.</h2>
+            <p className="mt-4 text-lg leading-relaxed text-ink-muted">
               A few lines from the founder-ācārya of ISKCON, whose instructions this tracker exists to serve.
             </p>
           </div>
@@ -188,7 +188,7 @@ export function PrabhupadaQuotes() {
             src="/landing/peacock.jpg"
             alt="A peacock feather holding a drop of water"
             loading="lazy"
-            className="hidden size-40 rounded-full object-cover ring-4 ring-white/10 md:block"
+            className="hidden size-40 rounded-full object-cover shadow-float ring-4 ring-card md:block"
           />
         </div>
       </div>
@@ -218,13 +218,14 @@ export function MantraBanner({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="relative overflow-hidden">
       <img src="/landing/sunrise.jpg" alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-[#1c1917]/65" />
+      {/* The sunrise shows through a sandalwood wash, so the mantra reads in ink like the rest of the page. */}
+      <div className="absolute inset-0 bg-[#fdfbf7]/85" />
       <div className="relative mx-auto max-w-4xl px-5 py-24 text-center md:py-36">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#f2b04a]">The mahā-mantra</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-saffron-text">The mahā-mantra</p>
         <motion.p
           animate={reduced ? undefined : { opacity: [0.82, 1, 0.82] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-          className="mt-6 font-serif text-3xl leading-snug text-white md:text-5xl"
+          className="mt-6 font-serif text-3xl leading-snug text-ink md:text-5xl"
         >
           Hare Kṛṣṇa Hare Kṛṣṇa
           <br />
@@ -234,9 +235,9 @@ export function MantraBanner({ signedIn }: { signedIn: boolean }) {
           <br />
           Rāma Rāma Hare Hare
         </motion.p>
-        <p className="mt-8 text-lg text-white/80">“Chant Hare Kṛṣṇa and be happy.” — Śrīla Prabhupāda</p>
+        <p className="mt-8 text-lg text-ink-muted">“Chant Hare Kṛṣṇa and be happy.” — Śrīla Prabhupāda</p>
         <div className="mt-10 flex justify-center">
-          <Ways signedIn={signedIn} light />
+          <Ways signedIn={signedIn} />
         </div>
       </div>
     </section>

@@ -1,4 +1,4 @@
-import type { GroupReport, MemberWeek } from '@sadhana/contract'
+import type { MemberWeek, Report } from '@sadhana/contract'
 import {
   dayStatus,
   resolveTarget,
@@ -12,9 +12,9 @@ import {
 } from '@sadhana/domain'
 import { and, asc, gte, inArray, lte } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { entries, targetChoices, type EntryRow, type GroupRow } from '../db/schema'
+import { entries, targetChoices, type EntryRow } from '../db/schema'
+import { activeAccounts } from './accounts'
 import { toRecord } from './entries'
-import { activeMembers } from './groups'
 import { recommendedHistory, toChoice } from './targets'
 
 const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
@@ -34,10 +34,11 @@ export async function entriesFor(db: Db, devoteeIds: string[], from: LocalDate, 
   return new Map(rows.map((row) => [`${row.devoteeId}|${row.localDate}`, row]))
 }
 
-export async function groupReport(db: Db, group: GroupRow, weekStart: LocalDate): Promise<GroupReport> {
+/** The congregation's week; `withRows` adds one row per devotee (numbers only, never reflections). */
+export async function congregationReport(db: Db, weekStart: LocalDate, withRows: boolean): Promise<Report> {
   const week = weekRangeOf(weekStart)
   const dates = weekDates(week.start)
-  const members = await activeMembers(db, group.id)
+  const members = await activeAccounts(db)
   const ids = members.map((member) => member.devoteeId)
   const records = await entriesFor(db, ids, week.start, week.end)
   const recommended = await recommendedHistory(db)
@@ -70,7 +71,6 @@ export async function groupReport(db: Db, group: GroupRow, weekStart: LocalDate)
     weeks.length ? Math.round(weeks.reduce((sum, item) => sum + item.completion[key], 0) / weeks.length) : 0
 
   return {
-    group: { id: group.id, name: group.name },
     week,
     summary: {
       members: weeks.length,
@@ -83,6 +83,6 @@ export async function groupReport(db: Db, group: GroupRow, weekStart: LocalDate)
         hearingMinutes: average('hearingMinutes'),
       },
     },
-    ...(group.canReviewRecords && { members: weeks }),
+    ...(withRows && { members: weeks }),
   }
 }

@@ -1,9 +1,9 @@
 import { addDays, dailyTotals, dayStatus, sumTotals, type LocalDate, type Target } from '@sadhana/domain'
 import ExcelJS from 'exceljs'
 import type { Db } from '../db/client'
-import type { EntryRow, GroupRow } from '../db/schema'
+import type { EntryRow } from '../db/schema'
+import { activeAccounts } from './accounts'
 import { toRecord } from './entries'
-import { activeMembers } from './groups'
 import { entriesFor } from './reports'
 
 type Cell = string | number
@@ -15,8 +15,9 @@ export interface ExportTable {
 
 const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
 
-export async function exportTable(db: Db, group: GroupRow, from: LocalDate, to: LocalDate): Promise<ExportTable> {
-  const members = await activeMembers(db, group.id)
+/** Individual rows per devotee and day when `individual`, otherwise one row of totals per day. */
+export async function exportTable(db: Db, from: LocalDate, to: LocalDate, individual: boolean): Promise<ExportTable> {
+  const members = await activeAccounts(db)
   const records = await entriesFor(
     db,
     members.map((member) => member.devoteeId),
@@ -26,7 +27,7 @@ export async function exportTable(db: Db, group: GroupRow, from: LocalDate, to: 
   const record = (devoteeId: string, date: LocalDate): EntryRow | undefined => records.get(`${devoteeId}|${date}`)
   const rows: Cell[][] = []
 
-  if (group.canReviewRecords) {
+  if (individual) {
     for (const member of members) {
       for (let date = from; date <= to; date = addDays(date, 1)) {
         const row = record(member.devoteeId, date)

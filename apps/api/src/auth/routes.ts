@@ -1,16 +1,15 @@
-import { ChangePasswordSchema, LoginSchema, OtpRequestSchema, ResetRequestSchema, SignupInputSchema } from '@sadhana/contract'
+import { ChangePasswordSchema, LoginSchema, OtpRequestSchema, ResetRequestSchema } from '@sadhana/contract'
 import { parseIdentifier } from '@sadhana/domain'
 import { eq } from 'drizzle-orm'
 import { Router, type Request, type Response } from 'express'
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit'
 import type { AppContext } from '../app'
-import { findAccountByIdentifier, findGroup, newDevoteeId } from '../db/queries'
+import { findAccountByIdentifier } from '../db/queries'
 import { accounts, resetRequests } from '../db/schema'
 import { HttpError, validate } from '../http/errors'
 import { DbRateLimitStore } from '../http/rateLimitStore'
-import { todayIn } from '../lib/dates'
 import { assertContactFree } from '../services/identity'
-import { consumeVerification, sendVerification } from '../services/otp'
+import { sendVerification } from '../services/otp'
 import { endAllSessions, endSession, startSession } from '../services/sessions'
 import { requireAuth } from './middleware'
 import { hashPassword, verifyPassword } from './password'
@@ -49,10 +48,10 @@ export function authRoutes(ctx: AppContext): Router {
       },
     })
   // Five wrong passwords per identifier, thirty per address whatever the identifier, and a cap on
-  // the public endpoints that cost an SMS or an argon2 hash.
+  // reset requests and verification texts per address.
   const loginLimiter = limiter('login', 5, (req) => `${byAddress(req)}:${attemptedIdentifier(req.body)}`, true)
   const sprayLimiter = limiter('spray', 30, byAddress, true)
-  const publicLimiter = limiter('public', 60, byAddress)
+  const publicLimiter = limiter('public', 30, byAddress)
 
   const openSession = async (res: Response, devoteeId: string) =>
     setSessionCookie(res, await issueToken(await startSession(ctx.db, devoteeId), secret), ctx.config)
@@ -63,7 +62,6 @@ export function authRoutes(ctx: AppContext): Router {
     const account = parsed && (await findAccountByIdentifier(ctx.db, parsed))
     const valid = await verifyPassword(account?.passwordHash ?? (await decoyHash), password)
     if (!account || !valid) throw new HttpError(401)
-    if (account.pending) throw new HttpError(403, { reason: 'PENDING' })
     if (!account.active) throw new HttpError(403, { reason: 'INACTIVE' })
     await openSession(res, account.devoteeId)
     res.json({ user: accountToUser(account) })
@@ -112,34 +110,12 @@ export function authRoutes(ctx: AppContext): Router {
     res.status(202).end()
   })
 
-  router.post('/otp', publicLimiter, async (req, res) => {
+  // Signed-in devotees verify a new number of their own; nobody else can make the API send texts.
+  router.post('/otp', publicLimiter, requireAuth(ctx), async (req, res) => {
     const { phone } = validate(OtpRequestSchema, req.body)
     await assertContactFree(ctx.db, { phone })
     await sendVerification(ctx.db, ctx.sms, secret, phone)
     res.status(202).end()
-  })
-
-  router.post('/signup', publicLimiter, async (req, res) => {
-    const input = validate(SignupInputSchema, req.body)
-    if (!(await findGroup(ctx.db, input.groupId))) {
-      throw new HttpError(400, { issues: [{ path: ['groupId'], message: 'Choose your group' }] })
-    }
-    await assertContactFree(ctx.db, input)
-    await consumeVerification(ctx.db, secret, input.phone, input.code)
-    const devoteeId = await newDevoteeId(ctx.db)
-    await ctx.db.insert(accounts).values({
-      devoteeId,
-      name: input.name,
-      role: 'DEVOTEE',
-      active: false,
-      pending: true,
-      passwordHash: await hashPassword(input.password, ctx.config.argon),
-      groupId: input.groupId,
-      joinedAt: todayIn('Asia/Kolkata'),
-      phone: input.phone,
-      email: input.email ?? null,
-    })
-    res.status(201).json({ devoteeId })
   })
 
   return router

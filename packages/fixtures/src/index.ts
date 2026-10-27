@@ -10,74 +10,51 @@ export interface Account {
   name: string
   role: Role
   active: boolean
-  pending: boolean
   mustChangePassword: boolean
   password: string
-  groupId: string | null
   joinedAt: LocalDate
   phone: string
   email?: string
   address?: string
-}
-
-export interface GroupDef {
-  id: string
-  name: string
-  coordinatorId: string
+  /** A coordinator with this grant sees individual rows in reports and exports. */
   canReviewRecords: boolean
 }
-
-export const GROUPS: GroupDef[] = [
-  { id: 'sharanagati', name: 'Sharanagati', coordinatorId: 'SH-0007', canReviewRecords: true },
-  { id: 'east', name: 'Sharanagati East', coordinatorId: 'SH-0011', canReviewRecords: false },
-]
 
 /** Every demo account answers on +91 98450 0NNNN, NNNN being its devotee number. */
 const phoneFor = (devoteeId: string) => `+91984500${devoteeId.slice(3)}`
 
-const account = (
-  devoteeId: string,
-  name: string,
-  role: Role,
-  groupId: string | null,
-  joinedAt: LocalDate,
-  extra: Partial<Account> = {},
-): Account => ({
+const account = (devoteeId: string, name: string, role: Role, joinedAt: LocalDate, extra: Partial<Account> = {}): Account => ({
   devoteeId,
   name,
   role,
   active: true,
-  pending: false,
   mustChangePassword: false,
   password: PASSWORD,
-  groupId,
   joinedAt,
   phone: phoneFor(devoteeId),
+  canReviewRecords: false,
   ...extra,
 })
 
 export const ACCOUNTS: Account[] = [
-  account('SH-0001', 'Nitāi Dāsa', 'ADMIN', null, '2024-01-15', { email: 'nitai@example.org' }),
-  account('SH-0007', 'Govinda Dāsa', 'COORDINATOR', 'sharanagati', '2024-02-03'),
-  account('SH-0011', 'Lalitā Devī Dāsī', 'COORDINATOR', 'east', '2024-02-03'),
-  account('SH-0042', 'Rādhikā Devī Dāsī', 'DEVOTEE', 'sharanagati', '2025-03-20', {
+  account('SH-0001', 'Nitāi Dāsa', 'ADMIN', '2024-01-15', { email: 'nitai@example.org' }),
+  account('SH-0007', 'Govinda Dāsa', 'COORDINATOR', '2024-02-03', { canReviewRecords: true }),
+  account('SH-0011', 'Lalitā Devī Dāsī', 'COORDINATOR', '2024-02-03'),
+  account('SH-0042', 'Rādhikā Devī Dāsī', 'DEVOTEE', '2025-03-20', {
     email: 'radhika@example.org',
     phone: '+919876543210',
     address: 'Sharanagati, Bengaluru',
   }),
-  account('SH-0043', 'Yaśodā Devī Dāsī', 'DEVOTEE', 'sharanagati', '2025-04-02'),
-  account('SH-0044', 'Nanda Kumāra Dāsa', 'DEVOTEE', 'sharanagati', '2025-05-11'),
-  account('SH-0045', 'Vṛndā Devī Dāsī', 'DEVOTEE', 'sharanagati', '2025-06-30'),
-  account('SH-0046', 'Gopīnātha Dāsa', 'DEVOTEE', 'sharanagati', '2025-08-14'),
-  account('SH-0051', 'Balarāma Dāsa', 'DEVOTEE', 'east', '2025-03-20'),
-  account('SH-0052', 'Tulasī Devī Dāsī', 'DEVOTEE', 'east', '2025-07-07'),
-  account('SH-0053', 'Keśava Dāsa', 'DEVOTEE', 'east', '2025-09-01'),
-  account('SH-0054', 'Subhadrā Devī Dāsī', 'DEVOTEE', 'east', '2025-10-10'),
-  account('SH-0108', 'Mādhava Dāsa', 'DEVOTEE', 'sharanagati', '2026-10-20', {
-    mustChangePassword: true,
-    password: TEMPORARY_PASSWORD,
-  }),
-  account('SH-0099', 'Jagannātha Dāsa', 'DEVOTEE', 'east', '2024-11-11', { active: false }),
+  account('SH-0043', 'Yaśodā Devī Dāsī', 'DEVOTEE', '2025-04-02'),
+  account('SH-0044', 'Nanda Kumāra Dāsa', 'DEVOTEE', '2025-05-11'),
+  account('SH-0045', 'Vṛndā Devī Dāsī', 'DEVOTEE', '2025-06-30'),
+  account('SH-0046', 'Gopīnātha Dāsa', 'DEVOTEE', '2025-08-14'),
+  account('SH-0051', 'Balarāma Dāsa', 'DEVOTEE', '2025-03-20'),
+  account('SH-0052', 'Tulasī Devī Dāsī', 'DEVOTEE', '2025-07-07'),
+  account('SH-0053', 'Keśava Dāsa', 'DEVOTEE', '2025-09-01'),
+  account('SH-0054', 'Subhadrā Devī Dāsī', 'DEVOTEE', '2025-10-10'),
+  account('SH-0108', 'Mādhava Dāsa', 'DEVOTEE', '2026-10-20', { mustChangePassword: true, password: TEMPORARY_PASSWORD }),
+  account('SH-0099', 'Jagannātha Dāsa', 'DEVOTEE', '2024-11-11', { active: false }),
 ]
 
 /** The mobile number a demo account signs in with. */
@@ -106,15 +83,15 @@ export const AUDIT: AuditEvent[] = [
     actor: 'Nitāi Dāsa (SH-0001)',
     action: 'ACCOUNT_CREATED',
     subject: 'Mādhava Dāsa (SH-0108)',
-    details: 'Devotee, Sharanagati',
+    details: 'DEVOTEE',
   },
   {
     id: 'a4',
     at: '2026-10-18T13:40:00.000Z',
     actor: 'Nitāi Dāsa (SH-0001)',
     action: 'RECORD_REVIEW_GRANTED',
-    subject: 'Sharanagati',
-    details: 'Coordinator may review individual records',
+    subject: 'Govinda Dāsa (SH-0007)',
+    details: 'May review individual records',
   },
   {
     id: 'a3',

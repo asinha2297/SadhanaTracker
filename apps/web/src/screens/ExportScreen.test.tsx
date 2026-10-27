@@ -19,12 +19,13 @@ beforeEach(() => {
 })
 
 describe('ExportScreen', () => {
-  it('downloads a CSV for the chosen group and this week by default', async () => {
+  it('downloads a CSV for this week by default', async () => {
     renderAt('/export')
     expect(await screen.findByLabelText('From')).toHaveValue('2026-10-19')
     expect(screen.getByLabelText('To')).toHaveValue('2026-10-25')
     await userEvent.setup().click(screen.getByRole('button', { name: 'Download' }))
-    expect(await screen.findByText('Downloaded sadhana-sharanagati-2026-10-19-2026-10-25.csv')).toBeInTheDocument()
+    expect(await screen.findByText('Downloaded sadhana-2026-10-19-2026-10-25.csv')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Group')).not.toBeInTheDocument()
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(anchorClick).toHaveBeenCalledTimes(1)
   })

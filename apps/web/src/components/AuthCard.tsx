@@ -9,9 +9,9 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full max-w-sm rounded-3xl bg-card p-7 shadow-[0_24px_64px_-32px_rgb(28_25_23/0.35)] md:p-9"
+        className="w-full max-w-sm rounded-3xl bg-card p-7 shadow-float md:p-9"
       >
-        <Wordmark />
+        <Wordmark tagline={false} />
         <h1 className="mt-8 font-serif text-3xl text-ink">{title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">{subtitle}</p>
         <div className="mt-7">{children}</div>

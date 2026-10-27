@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from './app'
 import { todayIn } from './lib/dates'
 import { createLogger } from './logger'
-import { signedIn, testContext, verifiedCode, type TestContext } from './test/app'
+import { signedIn, testContext, type TestContext } from './test/app'
 
 let ctx: TestContext
 beforeAll(async () => {
@@ -145,7 +145,7 @@ describe('sessions', () => {
   it('end everywhere when an administrator issues a one-time password', async () => {
     const devotee = await signedIn(ctx, 'SH-0046')
     const admin = await signedIn(ctx, 'SH-0001')
-    await admin.post('/api/admin/devotees/SH-0046/reset-password').expect(200)
+    await admin.post('/api/devotees/SH-0046/reset-password').expect(200)
     await devotee.get('/api/auth/session').expect(401)
   })
 })
@@ -178,7 +178,7 @@ describe('names', () => {
       .expect(200)
     expect(body.profile.name).toBe('Yaśodā Devī Dāsī')
     const admin = await signedIn(ctx, 'SH-0001')
-    const renamed = await admin.patch('/api/admin/devotees/SH-0043').send({ name: ' Yaśodā Devī Dāsī (Bengaluru) ' }).expect(200)
+    const renamed = await admin.patch('/api/devotees/SH-0043').send({ name: ' Yaśodā Devī Dāsī (Bengaluru) ' }).expect(200)
     expect(renamed.body.devotee.name).toBe('Yaśodā Devī Dāsī (Bengaluru)')
     const audit = await admin.get('/api/admin/audit').expect(200)
     expect(audit.body.events[0]).toMatchObject({
@@ -186,20 +186,17 @@ describe('names', () => {
       subject: 'Yaśodā Devī Dāsī (Bengaluru) (SH-0043)',
       details: 'was Yaśodā Devī Dāsī',
     })
-    await admin.patch('/api/admin/devotees/SH-0043').send({ name: '  ' }).expect(400)
+    await admin.patch('/api/devotees/SH-0043').send({ name: '  ' }).expect(400)
   })
 })
 
 describe('devotee IDs', () => {
   it('are drawn at random, not counted up', async () => {
+    const admin = await signedIn(ctx, 'SH-0001')
     const ids: string[] = []
     for (const phone of ['98450 00301', '98450 00302']) {
-      const code = await verifiedCode(ctx, phone)
-      const res = await request(ctx.app)
-        .post('/api/auth/signup')
-        .send({ name: 'Nimāi Dāsa', groupId: 'sharanagati', phone, password: 'govinda-jaya', code })
-        .expect(201)
-      ids.push(res.body.devoteeId)
+      const res = await admin.post('/api/devotees').send({ name: 'Nimāi Dāsa', phone }).expect(201)
+      ids.push(res.body.devotee.devoteeId)
     }
     expect(ids).toEqual([expect.stringMatching(/^SH-\d{6}$/), expect.stringMatching(/^SH-\d{6}$/)])
     expect(Math.abs(Number(ids[1]?.slice(3)) - Number(ids[0]?.slice(3)))).not.toBe(1)
@@ -209,9 +206,9 @@ describe('devotee IDs', () => {
 describe('administrators', () => {
   it('cannot remove the last active administrator', async () => {
     const admin = await signedIn(ctx, 'SH-0001')
-    await admin.patch('/api/admin/devotees/SH-0001').send({ role: 'COORDINATOR' }).expect(409, { reason: 'LAST_ADMIN' })
-    await admin.patch('/api/admin/devotees/SH-0001').send({ active: false }).expect(409, { reason: 'LAST_ADMIN' })
-    await admin.patch('/api/admin/devotees/SH-0001').send({ groupId: null }).expect(200)
+    await admin.patch('/api/devotees/SH-0001').send({ role: 'COORDINATOR' }).expect(409, { reason: 'LAST_ADMIN' })
+    await admin.patch('/api/devotees/SH-0001').send({ active: false }).expect(409, { reason: 'LAST_ADMIN' })
+    await admin.patch('/api/devotees/SH-0001').send({ canReviewRecords: true }).expect(200)
   })
 })
 

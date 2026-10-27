@@ -58,12 +58,6 @@ export function LoginScreen() {
             Forgotten your password?
           </Link>
         </p>
-        <p className="text-center text-sm text-ink-muted">
-          New here?{' '}
-          <Link to="/signup" className="font-medium text-saffron-text">
-            Create an account
-          </Link>
-        </p>
       </form>
     </AuthCard>
   )

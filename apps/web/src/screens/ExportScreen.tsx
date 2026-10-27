@@ -1,15 +1,11 @@
 import { weekRangeOf, type LocalDate } from '@sadhana/domain'
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { ApiError } from '../api/client'
-import type { Group } from '../api/contract'
-import { exportReport, groupsQuery, type ExportFormat } from '../api/groups'
+import { exportReport, type ExportFormat } from '../api/report'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { FormAlert } from '../components/FormAlert'
-import { GroupSelect } from '../components/GroupSelect'
 import { PageHeader } from '../components/PageHeader'
-import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { EYEBROW } from '../components/styles'
 import { TextField } from '../components/TextField'
 import { todayLocalDate } from '../lib/clock'
@@ -27,17 +23,7 @@ const FORMATS: { value: ExportFormat; label: string }[] = [
 ]
 
 export function ExportScreen() {
-  const groups = useQuery(groupsQuery)
-  if (groups.isError) return <ScreenError onRetry={() => void groups.refetch()} />
-  if (groups.isPending) return <ScreenLoading />
-  const first = groups.data[0]
-  if (!first) return <p className="py-20 text-center text-sm text-ink-muted">No groups are assigned to you yet.</p>
-  return <ExportForm groups={groups.data} firstGroupId={first.id} />
-}
-
-function ExportForm({ groups, firstGroupId }: { groups: Group[]; firstGroupId: string }) {
   const week = weekRangeOf(todayLocalDate())
-  const [groupId, setGroupId] = useState(firstGroupId)
   const [from, setFrom] = useState<LocalDate>(week.start)
   const [to, setTo] = useState<LocalDate>(week.end)
   const [format, setFormat] = useState<ExportFormat>('csv')
@@ -46,7 +32,7 @@ function ExportForm({ groups, firstGroupId }: { groups: Group[]; firstGroupId: s
   const download = async () => {
     setState({ kind: 'working' })
     try {
-      const { blob, filename } = await exportReport(groupId, from, to, format)
+      const { blob, filename } = await exportReport(from, to, format)
       downloadBlob(blob, filename)
       setState({ kind: 'done', filename })
     } catch (error) {
@@ -62,12 +48,8 @@ function ExportForm({ groups, firstGroupId }: { groups: Group[]; firstGroupId: s
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 py-6 md:py-10">
-      <PageHeader
-        title="Export"
-        subtitle="A file for the groups you are authorised to see, matching exactly the filters below."
-      />
+      <PageHeader title="Export" subtitle="A file of the congregation's records, matching exactly the filters below." />
       <Card className="space-y-5">
-        <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField id="from" label="From" type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} />
           <TextField id="to" label="To" type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} />
@@ -89,15 +71,15 @@ function ExportForm({ groups, firstGroupId }: { groups: Group[]; firstGroupId: s
           ))}
         </fieldset>
         <p className="text-xs text-ink-muted">
-          Exports never include reflections. Individual rows appear only for groups with record review enabled; other
-          groups export daily totals.
+          Exports never include reflections. Individual rows appear only when an administrator has granted you record
+          review; otherwise the file holds daily totals.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <Button type="button" disabled={state.kind === 'working' || from > to} onClick={() => void download()}>
             {state.kind === 'working' ? 'Preparing…' : 'Download'}
           </Button>
           {state.kind === 'done' && (
-            <p role="status" className="text-sm font-medium text-peacock-text">
+            <p role="status" className="text-sm font-medium text-tulasi">
               Downloaded {state.filename}
             </p>
           )}

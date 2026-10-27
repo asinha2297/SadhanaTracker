@@ -15,11 +15,11 @@ export function HelpScreen() {
             <strong>You</strong> see everything you record, including your reflections.
           </li>
           <li>
-            <strong>Your group coordinator</strong> sees weekly participation totals for the group. They can open your
-            individual numbers only if an administrator has granted that permission for your group.
+            <strong>Coordinators</strong> see weekly participation totals for the congregation. They can open your
+            individual numbers only if an administrator has granted them record review.
           </li>
           <li>
-            <strong>Administrators</strong> manage accounts, roles, groups and recommended targets. They can start a
+            <strong>Administrators</strong> manage accounts, roles and recommended targets. They can start a
             password reset for you without ever seeing a password, and every such action is written to a permanent
             audit log.
           </li>
@@ -32,10 +32,10 @@ export function HelpScreen() {
         <h2 className="font-serif text-2xl">Getting help</h2>
         <ul className="mt-4 space-y-3 text-sm leading-relaxed">
           <li>
-            New to the congregation? Create an account from the sign-in screen; your group coordinator approves it
-            before your first sign-in.
+            New to the congregation? A coordinator or an administrator creates your account and hands you a one-time
+            password in person; you choose your own password at your first sign-in.
           </li>
-          <li>For questions about targets, groups or reports, speak with your group coordinator.</li>
+          <li>For questions about targets or reports, speak with your coordinator.</li>
           <li>
             Forgotten your password? Ask your coordinator or an administrator for a one-time password; you will choose
             a new one when you sign in.

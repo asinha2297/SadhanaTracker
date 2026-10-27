@@ -1,5 +1,5 @@
 import { addDays } from '@sadhana/domain'
-import { ACCOUNTS, AUDIT, generatedEntry, GROUPS, PERSONAL, RECOMMENDED, RESET_REQUESTS } from '@sadhana/fixtures'
+import { ACCOUNTS, AUDIT, generatedEntry, PERSONAL, RECOMMENDED, RESET_REQUESTS } from '@sadhana/fixtures'
 import { hashPassword } from '../auth/password'
 import type { ArgonOptions, Config } from '../config'
 import { todayIn } from '../lib/dates'
@@ -21,15 +21,6 @@ export interface SeedOptions {
 }
 
 export async function seedFixtures(db: Db, options: SeedOptions): Promise<void> {
-  await db.insert(t.groups).values(
-    GROUPS.map((group) => ({
-      id: group.id,
-      name: group.name,
-      coordinatorId: group.coordinatorId,
-      canReviewRecords: group.canReviewRecords,
-    })),
-  )
-
   await db.insert(t.accounts).values(
     await Promise.all(
       ACCOUNTS.map(async (account) => ({
@@ -37,10 +28,9 @@ export async function seedFixtures(db: Db, options: SeedOptions): Promise<void> 
         name: account.name,
         role: account.role,
         active: account.active,
-        pending: account.pending,
         mustChangePassword: account.mustChangePassword,
         passwordHash: await hashPassword(account.password, options.argon),
-        groupId: account.groupId,
+        canReviewRecords: account.canReviewRecords,
         joinedAt: account.joinedAt,
         phone: account.phone,
         email: account.email ?? null,
@@ -86,7 +76,7 @@ export async function seedFixtures(db: Db, options: SeedOptions): Promise<void> 
 
   const today = todayIn('Asia/Kolkata')
   const rows: (typeof t.entries.$inferInsert)[] = []
-  for (const account of ACCOUNTS.filter((candidate) => candidate.active && !candidate.pending)) {
+  for (const account of ACCOUNTS.filter((candidate) => candidate.active)) {
     for (let date = addDays(today, -options.entryDays); date < today; date = addDays(date, 1)) {
       const entry = generatedEntry(account.devoteeId, date)
       if (!entry) continue
