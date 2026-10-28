@@ -78,6 +78,10 @@ Everyone signs in with a **mobile number or email** and a password. There is no 
 
 Mobile numbers are matched loosely: `98765 43210`, `098765-43210` and `+91 98765 43210` are the same account. Devotee IDs (`SH-0042`…) identify people on the roster and in reports but are never typed to sign in.
 
+### 8. Languages
+
+The language pill (English · हिन्दी · বাংলা) sits in the welcome page header, on the sign-in card, in the sidebar footer and on the phone *More* screen. Switching is instant, the choice is remembered on the device (`localStorage` key `sadhana.language`), and a first visit follows the device language when it is Hindi or Bengali. Every string lives in `apps/web/src/i18n/`: `en.ts` is the source of truth, and the compiler refuses a `hi.ts` or `bn.ts` that misses a key. Dates and numbers follow the language, Bengali digits included; Devanagari and Bengali text falls back to self-hosted Noto fonts. The Hindi and Bangla beyond the welcome page's verified strings were machine-translated and should be read by a native-speaking devotee before release.
+
 ### Verification codes
 
 A devotee changing their own mobile number is texted a six-digit code. In development no SMS is sent; the code appears in the **backend terminal**:
@@ -93,6 +97,10 @@ npm run dev:web            # http://localhost:5173 against built-in mocks (MSW);
 ```
 
 Same demo accounts; data resets on reload; verification codes are printed in the browser console.
+
+### 9. Library
+
+Reading and hearing are recorded against the congregation's library rather than typed: on *Record*, the Book field and the Lecture field are searchable lists (type a few letters, diacritics optional), and choosing a lecture fills in its speaker and source; a Speaker field narrows the lectures first. Coordinators and administrators keep the library on the *Library* tab of *Master admin* (`/master-admin/library`; the *Devotees* tab holds accounts and reset requests): add, edit and remove books and lectures (speaker and source optional). An item that records point at can be renamed but not removed, so history keeps its names. Migration 0006 created the `books`, `lectures`, `reading_sessions` and `hearing_sessions` tables and filled the library from the titles already recorded.
 
 ## Checking that everything works
 
@@ -197,6 +205,7 @@ Verification texts can only be requested by signed-in devotees, so nobody outsid
 |---|---|
 | `SESSION_SECRET (at least 32 random characters) is required` | Step 3: create `apps/api/.env` and set the secret. |
 | `The database already has accounts; nothing was seeded.` | Normal on a second run. To start over, stop the backend, delete `apps/api/data/sadhana` and seed again. |
+| The only administrator forgot their password (nobody left who could issue a one-time password) | Stop the backend if it runs on PGlite, then `npm run reset-password -w apps/api -- 98450 00001` (a mobile number or email). It prints a one-time password; sign in with it and choose a new one. Every session of that account is ended. |
 | A migration fails on your old development database | Development data is disposable: delete `apps/api/data/sadhana` and seed again. |
 | Port 3000 or 5173 is taken | `PORT=3001 npm run dev:api` and `API_URL=http://localhost:3001 npm run dev:web:live -- -- --port 5174` (the double `--` passes the port through two npm scripts to Vite). |
 | "Code sent" but no SMS arrives | In development the code is in the backend terminal; in production set `SMS_PROVIDER=twilio`. |

@@ -1,6 +1,6 @@
 import type { EntryRecord } from '@sadhana/contract'
-import type { HearingSession, ReadingSession } from '@sadhana/domain'
-import { boolean, date, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, date, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 const ROLES = ['DEVOTEE', 'COORDINATOR', 'ADMIN'] as const
 
@@ -66,11 +66,66 @@ export const entries = pgTable(
     localDate: date('local_date', { mode: 'string' }).notNull(),
     rounds: integer('rounds').notNull(),
     reflection: text('reflection'),
-    reading: jsonb('reading').$type<ReadingSession[]>().notNull(),
-    hearing: jsonb('hearing').$type<HearingSession[]>().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('entries_devotee_date_idx').on(table.devoteeId, table.localDate)],
+)
+
+/** The congregation's library. Titles are unique regardless of case; a lecture is unique per speaker. */
+export const books = pgTable(
+  'books',
+  {
+    id: serial('id').primaryKey(),
+    title: text('title').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('books_title_idx').on(sql`lower(${table.title})`)],
+)
+
+export const lectures = pgTable(
+  'lectures',
+  {
+    id: serial('id').primaryKey(),
+    title: text('title').notNull(),
+    speaker: text('speaker'),
+    source: text('source'),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('lectures_title_speaker_idx').on(sql`lower(${table.title})`, sql`lower(coalesce(${table.speaker}, ''))`)],
+)
+
+/** A day's reading and hearing, one row per session, pointing at the library rather than naming titles. */
+export const readingSessions = pgTable(
+  'reading_sessions',
+  {
+    id: serial('id').primaryKey(),
+    entryId: integer('entry_id')
+      .notNull()
+      .references(() => entries.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    bookId: integer('book_id')
+      .notNull()
+      .references(() => books.id),
+    chapterOrSection: text('chapter_or_section'),
+    minutes: integer('minutes').notNull(),
+  },
+  (table) => [index('reading_sessions_entry_idx').on(table.entryId), index('reading_sessions_book_idx').on(table.bookId)],
+)
+
+export const hearingSessions = pgTable(
+  'hearing_sessions',
+  {
+    id: serial('id').primaryKey(),
+    entryId: integer('entry_id')
+      .notNull()
+      .references(() => entries.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    lectureId: integer('lecture_id')
+      .notNull()
+      .references(() => lectures.id),
+    minutes: integer('minutes').notNull(),
+  },
+  (table) => [index('hearing_sessions_entry_idx').on(table.entryId), index('hearing_sessions_lecture_idx').on(table.lectureId)],
 )
 
 export const idempotencyKeys = pgTable('idempotency_keys', {

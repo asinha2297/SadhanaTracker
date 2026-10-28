@@ -24,8 +24,9 @@ import { EntrySummary } from '../components/EntrySummary'
 import { FormAlert } from '../components/FormAlert'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { EYEBROW, ICON_BUTTON } from '../components/styles'
+import { translateMessage, useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { longDate, totalsLine } from '../lib/format'
 import { useSync, type SyncProblem } from '../sync/SyncContext'
 import { useEntries } from '../sync/useEntries'
 import { useSaveEntry } from '../sync/useSaveEntry'
@@ -37,17 +38,13 @@ const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(va
 const sumMinutes = (sessions: unknown) =>
   Array.isArray(sessions) ? sessions.reduce((sum: number, s) => sum + num((s as { minutes?: unknown })?.minutes), 0) : 0
 
+/** The saved record as the form holds it: ids only, the library supplies the names. */
 const toForm = (entry: DailyEntry): DailyEntry => ({
   localDate: entry.localDate,
   rounds: entry.rounds,
   reflection: entry.reflection ?? '',
-  reading: entry.reading.map((s) => ({ bookTitle: s.bookTitle, chapterOrSection: s.chapterOrSection ?? '', minutes: s.minutes })),
-  hearing: entry.hearing.map((s) => ({
-    lectureTitle: s.lectureTitle,
-    speaker: s.speaker ?? '',
-    source: s.source ?? '',
-    minutes: s.minutes,
-  })),
+  reading: entry.reading.map((s) => ({ bookId: s.bookId, chapterOrSection: s.chapterOrSection ?? '', minutes: s.minutes })),
+  hearing: entry.hearing.map((s) => ({ lectureId: s.lectureId, minutes: s.minutes })),
 })
 
 export function EntryScreen() {
@@ -58,6 +55,8 @@ export function EntryScreen() {
 }
 
 function EntryDay({ date, today }: { date: LocalDate; today: LocalDate }) {
+  const t = useT()
+  const fmt = useFormat()
   const { query, entries } = useEntries(date, date)
   const targets = useQuery(targetsQuery)
   const { queue, problems, resolve } = useSync()
@@ -72,16 +71,16 @@ function EntryDay({ date, today }: { date: LocalDate; today: LocalDate }) {
 
   return (
     <div className="mx-auto max-w-3xl py-6 md:py-10">
-      <nav aria-label="Day" className="flex items-center justify-between gap-3">
-        <Link to={`/entry/${addDays(date, -1)}`} aria-label="Previous day" className={ICON_BUTTON}>
+      <nav aria-label={t.entry.dayNav} className="flex items-center justify-between gap-3">
+        <Link to={`/entry/${addDays(date, -1)}`} aria-label={t.entry.previousDay} className={ICON_BUTTON}>
           <ChevronLeft className="size-5" aria-hidden />
         </Link>
         <div className="text-center">
-          <p className={EYEBROW}>{date === today ? 'Today' : 'Record sadhana'}</p>
-          <h1 className="font-serif text-2xl text-ink md:text-3xl">{longDate(date)}</h1>
+          <p className={EYEBROW}>{date === today ? t.entry.today : t.entry.recordSadhana}</p>
+          <h1 className="font-serif text-2xl text-ink md:text-3xl">{fmt.longDate(date)}</h1>
         </div>
         {date < today ? (
-          <Link to={`/entry/${addDays(date, 1)}`} aria-label="Next day" className={ICON_BUTTON}>
+          <Link to={`/entry/${addDays(date, 1)}`} aria-label={t.entry.nextDay} className={ICON_BUTTON}>
             <ChevronRight className="size-5" aria-hidden />
           </Link>
         ) : (
@@ -104,13 +103,13 @@ function EntryDay({ date, today }: { date: LocalDate; today: LocalDate }) {
         <div className="mt-6 space-y-4">
           <Card className="flex items-center gap-3 text-sm text-ink-muted">
             <Lock className="size-4 shrink-0" aria-hidden />
-            {date > today ? "This day hasn't arrived yet." : `Entries older than ${EDIT_WINDOW_DAYS} days can't be changed.`}
+            {date > today ? t.entry.notArrived : t.entry.tooOld(fmt.number(EDIT_WINDOW_DAYS))}
           </Card>
           {existing ? (
             <EntrySummary entry={existing} />
           ) : (
             <Card>
-              <p className="text-sm text-ink-muted">No record for this day.</p>
+              <p className="text-sm text-ink-muted">{t.entry.noRecord}</p>
             </Card>
           )}
         </div>
@@ -130,23 +129,22 @@ function ConflictCard({
   onKeep: () => void
   onUseTheirs: () => void
 }) {
-  const time = new Date(server.updatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const t = useT()
+  const fmt = useFormat()
   return (
     <Card role="alert" className="border-saffron/40 bg-saffron/8">
-      <p className="font-medium text-ink">
-        {intro} at {time}.
-      </p>
-      <p className="mt-1 text-sm text-ink-muted">Their record: {totalsLine(dailyTotals(server))}.</p>
+      <p className="font-medium text-ink">{t.entry.conflictAt(intro, fmt.time(server.updatedAt))}</p>
+      <p className="mt-1 text-sm text-ink-muted">{t.entry.theirRecord(fmt.totals(dailyTotals(server)))}</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button type="button" onClick={onKeep}>
-          Keep mine
+          {t.entry.keepMine}
         </Button>
         <button
           type="button"
           onClick={onUseTheirs}
           className="rounded-full border border-line px-5 py-3 text-sm font-semibold text-ink"
         >
-          Use theirs
+          {t.entry.useTheirs}
         </button>
       </div>
     </Card>
@@ -154,21 +152,23 @@ function ConflictCard({
 }
 
 function RoundsField({ form, target }: { form: UseFormReturn<DailyEntry>; target: number }) {
+  const t = useT()
+  const fmt = useFormat()
   const rounds = useWatch({ control: form.control, name: 'rounds' })
   const current = num(rounds)
   const set = (value: number) =>
     form.setValue('rounds', Math.max(0, value), { shouldDirty: true, shouldValidate: true })
-  const error = form.formState.errors.rounds?.message
+  const error = translateMessage(t, form.formState.errors.rounds?.message)
   return (
-    <Card aria-label="Japa">
+    <Card aria-label={t.practices.japa}>
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-xl text-ink">Japa</h2>
-        <p className="text-xs text-ink-muted">Target {target} rounds</p>
+        <h2 className="font-serif text-xl text-ink">{t.practices.japa}</h2>
+        <p className="text-xs text-ink-muted">{t.entry.targetRounds(fmt.number(target))}</p>
       </div>
       <div className="mt-4 flex items-center justify-center gap-5">
         <button
           type="button"
-          aria-label="One round fewer"
+          aria-label={t.entry.fewer}
           onClick={() => set(current - 1)}
           className="flex size-12 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-peacock/8"
         >
@@ -184,12 +184,12 @@ function RoundsField({ form, target }: { form: UseFormReturn<DailyEntry>; target
             {...form.register('rounds', { valueAsNumber: true })}
           />
           <label htmlFor="rounds" className="block text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
-            Rounds
+            {t.entry.rounds}
           </label>
         </div>
         <button
           type="button"
-          aria-label="One round more"
+          aria-label={t.entry.more}
           onClick={() => set(current + 1)}
           className="flex size-12 items-center justify-center rounded-full bg-saffron text-white"
         >
@@ -218,6 +218,8 @@ function EntryForm({
   problem: SyncProblem | undefined
   onResolve: () => void
 }) {
+  const t = useT()
+  const fmt = useFormat()
   const navigate = useNavigate()
   const save = useSaveEntry()
   const baseRef = useRef(base)
@@ -240,7 +242,7 @@ function EntryForm({
     setConflict(undefined)
     const result = await save(entry, baseUpdatedAt)
     if (result.outcome === 'conflict') setConflict(result.server)
-    else if (result.outcome === 'rejected') setFailure("This day can't be saved. It may be outside the editing window now.")
+    else if (result.outcome === 'rejected') setFailure(t.entry.rejected)
     else void navigate('/')
   }
 
@@ -257,14 +259,12 @@ function EntryForm({
 
   return (
     <form onSubmit={form.handleSubmit((entry) => persist(entry, baseRef.current))} noValidate className="mt-6 space-y-4">
-      <p className="text-center text-sm text-ink-muted">
-        {date === today ? "Haribol. Record today's sadhana in under two minutes." : 'Backfilling a past day keeps your week honest.'}
-      </p>
+      <p className="text-center text-sm text-ink-muted">{date === today ? t.entry.introToday : t.entry.introPast}</p>
       <FormAlert message={failure} />
       {problem &&
         (problem.server ? (
           <ConflictCard
-            intro="Your offline entry for this day couldn't be synced: it was updated elsewhere"
+            intro={t.entry.offlineConflict}
             server={problem.server}
             onKeep={() => {
               onResolve()
@@ -274,15 +274,15 @@ function EntryForm({
           />
         ) : (
           <Card role="alert" className="flex items-center justify-between gap-3 border-saffron/40 bg-saffron/8 text-sm">
-            <p className="text-ink">Your offline entry for this day was not accepted by the server; it may be locked now.</p>
+            <p className="text-ink">{t.entry.offlineRefused}</p>
             <button type="button" onClick={onResolve} className="shrink-0 font-semibold text-saffron-text">
-              Dismiss
+              {t.entry.dismiss}
             </button>
           </Card>
         ))}
       {conflict && (
         <ConflictCard
-          intro="This day was updated elsewhere"
+          intro={t.entry.conflict}
           server={conflict}
           onKeep={() => void form.handleSubmit((entry) => keepMine(conflict, entry))()}
           onUseTheirs={() => useTheirs(conflict)}
@@ -293,11 +293,11 @@ function EntryForm({
       <ReadingRows form={form} />
       <HearingRows form={form} />
 
-      <Card aria-label="Reflection">
+      <Card aria-label={t.entry.reflection}>
         <label htmlFor="reflection" className="font-serif text-xl text-ink">
-          Reflection
+          {t.entry.reflection}
         </label>
-        <p className="mt-1 text-xs text-ink-muted">Optional, and private to you.</p>
+        <p className="mt-1 text-xs text-ink-muted">{t.entry.reflectionHint}</p>
         <textarea
           id="reflection"
           rows={3}
@@ -306,14 +306,12 @@ function EntryForm({
         />
       </Card>
 
-      {zeroDay && (
-        <p className="text-center text-sm text-saffron-text">This will be saved as a zero day. Honest tracking counts too.</p>
-      )}
+      {zeroDay && <p className="text-center text-sm text-saffron-text">{t.entry.zeroDay}</p>}
 
       <div className="sticky bottom-24 z-10 flex items-center justify-between gap-4 rounded-2xl border border-line bg-card/90 p-4 shadow-lg backdrop-blur-xl md:bottom-6">
-        <p className="text-sm font-medium text-ink">{totalsLine(totals)}</p>
+        <p className="text-sm font-medium text-ink">{fmt.totals(totals)}</p>
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Saving…' : 'Save'}
+          {form.formState.isSubmitting ? t.entry.saving : t.entry.save}
         </Button>
       </div>
     </form>

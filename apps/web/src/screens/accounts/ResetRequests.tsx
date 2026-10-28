@@ -3,10 +3,13 @@ import { useState } from 'react'
 import { issuePassword, resetRequestsQuery } from '../../api/accounts'
 import { Card } from '../../components/Card'
 import { FormAlert } from '../../components/FormAlert'
-import { instantLabel } from '../../lib/format'
+import { useT } from '../../i18n'
+import { useFormat } from '../../i18n/format'
 import { PasswordHandover, SMALL_BUTTON, type Handover } from './PasswordHandover'
 
 export function ResetRequests() {
+  const t = useT()
+  const fmt = useFormat()
   const queryClient = useQueryClient()
   const requests = useQuery(resetRequestsQuery)
   const [handover, setHandover] = useState<Handover>()
@@ -19,25 +22,22 @@ export function ResetRequests() {
       setHandover({ name, password: await issuePassword(devoteeId) })
       await queryClient.invalidateQueries({ queryKey: ['accounts', 'reset-requests'] })
     } catch {
-      setFailure("We couldn't issue a password. Check your connection and try again.")
+      setFailure(t.masterAdmin.issueFailed)
     }
   }
 
   return (
-    <Card aria-label="Password reset requests">
-      <h2 className="font-serif text-xl text-ink">Password reset requests</h2>
+    <Card aria-label={t.masterAdmin.resetRequests}>
+      <h2 className="font-serif text-xl text-ink">{t.masterAdmin.resetRequests}</h2>
       <ul className="mt-3 divide-y divide-line">
         {requests.data?.map((request) => (
           <li key={request.devoteeId} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
             <span>
               <span className="font-medium text-ink">{request.name}</span>
-              <span className="text-ink-muted">
-                {' '}
-                · {request.devoteeId} · asked {instantLabel(request.requestedAt)}
-              </span>
+              <span className="text-ink-muted"> {t.masterAdmin.asked(request.devoteeId, fmt.instant(request.requestedAt))}</span>
             </span>
             <button type="button" onClick={() => void issue(request.devoteeId, request.name)} className={SMALL_BUTTON}>
-              Issue one-time password
+              {t.masterAdmin.issuePassword}
             </button>
           </li>
         ))}

@@ -12,7 +12,6 @@ const MAX_SESSIONS = 20
 const MAX_TEXT = 200
 const MAX_REFLECTION = 4000
 
-const requiredText = (message: string) => z.string().trim().min(1, message).max(MAX_TEXT, 'Keep it shorter')
 const optionalText = z
   .string()
   .trim()
@@ -26,16 +25,17 @@ const wholeMinutes = z
   .max(MAX_MINUTES, 'A day has 1440 minutes')
 const nonNegativeInt = z.number({ error: 'Enter a number' }).int('Whole numbers only').nonnegative("Can't be negative")
 
+/** A row of the congregation's library (books, lectures), which a session points at rather than naming. */
+const libraryId = (message: string) => z.number({ error: message }).int(message).positive(message)
+
 export const ReadingSessionSchema = z.object({
-  bookTitle: requiredText('Enter the book title'),
+  bookId: libraryId('Choose a book from the library'),
   chapterOrSection: optionalText,
   minutes: wholeMinutes,
 })
 
 export const HearingSessionSchema = z.object({
-  lectureTitle: requiredText('Enter the lecture title'),
-  speaker: optionalText,
-  source: optionalText,
+  lectureId: libraryId('Choose a lecture from the library'),
   minutes: wholeMinutes,
 })
 

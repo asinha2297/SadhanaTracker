@@ -30,27 +30,61 @@ async function setRounds(rounds: number) {
 
 const section = (name: string) => within(screen.getByRole('region', { name }))
 
+/** Types into a combobox and takes the option that matches. */
+async function pick(field: HTMLElement, query: string, option: RegExp) {
+  await user().type(field, query)
+  await user().click(await screen.findByRole('option', { name: option }))
+}
+
 describe('EntryScreen', () => {
-  it('records a day in a few taps', async () => {
+  it('records a day in a few taps, choosing the book from the library', async () => {
     renderAt('/entry')
     await setRounds(16)
     await user().click(screen.getByRole('button', { name: 'Add reading session' }))
-    await user().type(section('Reading').getByLabelText('Book'), 'Bhagavad-gītā As It Is')
+    await pick(section('Reading').getByRole('combobox', { name: 'Book' }), 'as it is', /Bhagavad-gītā As It Is/)
+    expect(section('Reading').getByRole('combobox', { name: 'Book' })).toHaveValue('Bhagavad-gītā As It Is')
     await user().type(section('Reading').getByLabelText('Minutes'), '30')
     expect(screen.getByText(/16 rounds · 30 min reading/)).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Save' }))
     await expectLocation('/')
     expect(savedEntry(devotee.devoteeId, today)).toMatchObject({
       rounds: 16,
-      reading: [{ bookTitle: 'Bhagavad-gītā As It Is', minutes: 30 }],
+      reading: [{ bookId: 1, bookTitle: 'Bhagavad-gītā As It Is', minutes: 30 }],
     })
   })
 
-  it('asks for a title and minutes before saving a session', async () => {
+  it('fills in the speaker and source of the lecture a devotee picks', async () => {
+    renderAt('/entry')
+    await user().click(await screen.findByRole('button', { name: 'Add hearing session' }))
+    const hearing = section('Hearing')
+    await pick(hearing.getByRole('combobox', { name: 'Lecture' }), 'japa', /Japa workshop/)
+    expect(hearing.getByRole('combobox', { name: 'Speaker' })).toHaveValue('Govinda Dāsa')
+    expect(hearing.getByText('Source: Temple')).toBeInTheDocument()
+    await user().type(hearing.getByLabelText('Minutes'), '25')
+    await user().click(screen.getByRole('button', { name: 'Save' }))
+    await expectLocation('/')
+    expect(savedEntry(devotee.devoteeId, today)).toMatchObject({
+      hearing: [{ lectureId: 4, lectureTitle: 'Japa workshop', speaker: 'Govinda Dāsa', source: 'Temple', minutes: 25 }],
+    })
+  })
+
+  it('narrows the lectures to the speaker chosen first', async () => {
+    renderAt('/entry')
+    await user().click(await screen.findByRole('button', { name: 'Add hearing session' }))
+    const hearing = section('Hearing')
+    await pick(hearing.getByRole('combobox', { name: 'Speaker' }), 'prabhu', /Śrīla Prabhupāda/)
+    await user().click(hearing.getByRole('combobox', { name: 'Lecture' }))
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Bhagavad-gītā classŚrīla Prabhupāda · Vanipedia',
+      'Caitanya-caritāmṛta readingŚrīla Prabhupāda · Audio archive',
+    ])
+  })
+
+  it('asks for a lecture and minutes before saving a session', async () => {
     renderAt('/entry')
     await user().click(await screen.findByRole('button', { name: 'Add hearing session' }))
     await user().click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText('Enter the lecture title')).toBeInTheDocument()
+    expect(await screen.findByText('Choose a lecture from the library')).toBeInTheDocument()
     expect(screen.getByText('Enter minutes')).toBeInTheDocument()
     expect(savedEntry(devotee.devoteeId, today)).toBeUndefined()
   })
@@ -68,7 +102,7 @@ describe('EntryScreen', () => {
     seedEntry(devotee.devoteeId, {
       localDate: today,
       rounds: 12,
-      reading: [{ bookTitle: 'Śrīmad-Bhāgavatam', chapterOrSection: 'Canto 1', minutes: 20 }],
+      reading: [{ bookId: 2, chapterOrSection: 'Canto 1', minutes: 20 }],
       hearing: [],
       reflection: 'Steady rounds.',
     })
@@ -78,7 +112,7 @@ describe('EntryScreen', () => {
     await setRounds(16)
     await user().click(screen.getByRole('button', { name: 'Save' }))
     await expectLocation('/')
-    expect(savedEntry(devotee.devoteeId, today)).toMatchObject({ rounds: 16, reflection: 'Steady rounds.' })
+    expect(savedEntry(devotee.devoteeId, today)).toMatchObject({ rounds: 16, reflection: 'Steady rounds.', reading: [{ bookId: 2, minutes: 20 }] })
   })
 
   it('keeps the entry on this device when offline and syncs once back online', async () => {

@@ -1,5 +1,7 @@
-import { dailyTotals, dayStatus, type DailyEntry } from '@sadhana/domain'
-import { minutesLabel, totalsLine } from '../lib/format'
+import { dailyTotals, dayStatus } from '@sadhana/domain'
+import type { EntryRecord } from '../api/contract'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { Card } from './Card'
 import { StatusBadge } from './StatusBadge'
 
@@ -10,6 +12,7 @@ interface SessionLine {
 }
 
 function SessionList({ title, items }: { title: string; items: SessionLine[] }) {
+  const fmt = useFormat()
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">{title}</p>
@@ -20,7 +23,7 @@ function SessionList({ title, items }: { title: string; items: SessionLine[] }) 
               {item.title}
               {item.detail && <span className="text-ink-muted"> · {item.detail}</span>}
             </span>
-            <span className="shrink-0 text-ink-muted">{minutesLabel(item.minutes)}</span>
+            <span className="shrink-0 text-ink-muted">{fmt.minutes(item.minutes)}</span>
           </li>
         ))}
       </ul>
@@ -28,22 +31,24 @@ function SessionList({ title, items }: { title: string; items: SessionLine[] }) 
   )
 }
 
-export function EntrySummary({ entry }: { entry: DailyEntry }) {
+export function EntrySummary({ entry }: { entry: EntryRecord }) {
+  const t = useT()
+  const fmt = useFormat()
   return (
     <Card className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <StatusBadge status={dayStatus(entry)} />
-        <p className="text-sm text-ink-muted">{totalsLine(dailyTotals(entry))}</p>
+        <p className="text-sm text-ink-muted">{fmt.totals(dailyTotals(entry))}</p>
       </div>
       {entry.reading.length > 0 && (
         <SessionList
-          title="Reading"
+          title={t.practices.reading}
           items={entry.reading.map((s) => ({ title: s.bookTitle, detail: s.chapterOrSection, minutes: s.minutes }))}
         />
       )}
       {entry.hearing.length > 0 && (
         <SessionList
-          title="Hearing"
+          title={t.practices.hearing}
           items={entry.hearing.map((s) => ({
             title: s.lectureTitle,
             detail: [s.speaker, s.source].filter(Boolean).join(' · ') || undefined,

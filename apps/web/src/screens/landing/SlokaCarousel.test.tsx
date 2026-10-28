@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
-import { SLOKAS } from '../../lib/landing'
+import { en } from '../../i18n/en'
 import { SlokaCarousel } from './Sections'
 
 const stubbedMatchMedia = window.matchMedia
@@ -20,7 +20,7 @@ describe('SlokaCarousel', () => {
     render(<SlokaCarousel />)
     const region = within(screen.getByRole('region', { name: 'Ślokas' }))
     expect(region.getByText(/ananyāś cintayanto/)).toBeInTheDocument()
-    for (const sloka of SLOKAS) expect(region.getByAltText(sloka.alt)).toBeInTheDocument()
+    for (const sloka of en.landing.slokas) expect(region.getByAltText(sloka.alt)).toBeInTheDocument()
     expect(region.getByAltText(/Śrīla Prabhupāda/)).toBeInTheDocument()
     expect(region.getAllByAltText(/Kṛṣṇa and Arjuna/)).toHaveLength(2)
   })

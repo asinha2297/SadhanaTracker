@@ -43,6 +43,13 @@
       "when": 1793124705394,
       "tag": "0005_small_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793177248921,
+      "tag": "0006_library",
+      "breakpoints": true
     }
   ]
 }

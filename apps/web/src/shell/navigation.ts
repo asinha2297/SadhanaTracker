@@ -13,11 +13,14 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import type { Dictionary } from '../i18n/en'
 
-export type NavSection = 'Your sadhana' | 'Congregation' | 'Administration' | 'Support'
+export type NavKey = keyof Dictionary['nav']['items']
+export type NavSection = keyof Dictionary['nav']['sections']
 
 export interface NavItem {
-  label: string
+  /** Looked up in the dictionary's nav.items, so the label follows the language. */
+  key: NavKey
   to: string
   icon: LucideIcon
   section: NavSection
@@ -26,17 +29,17 @@ export interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Today', to: '/', icon: Sunrise, section: 'Your sadhana', capability: 'TRACK_SADHANA', primary: true },
-  { label: 'Record', to: '/entry', icon: NotebookPen, section: 'Your sadhana', capability: 'TRACK_SADHANA', primary: true },
-  { label: 'Week', to: '/week', icon: CalendarDays, section: 'Your sadhana', capability: 'TRACK_SADHANA', primary: true },
-  { label: 'History', to: '/history', icon: History, section: 'Your sadhana', capability: 'TRACK_SADHANA', primary: true },
-  { label: 'Profile & targets', to: '/profile', icon: UserRound, section: 'Your sadhana', capability: 'TRACK_SADHANA' },
-  { label: 'Reminders', to: '/reminders', icon: BellRing, section: 'Your sadhana', capability: 'TRACK_SADHANA' },
-  { label: 'Report', to: '/report', icon: Users, section: 'Congregation', capability: 'VIEW_REPORTS' },
-  { label: 'Master admin', to: '/master-admin', icon: UserRoundPlus, section: 'Congregation', capability: 'MANAGE_ACCOUNTS' },
-  { label: 'Export', to: '/export', icon: Download, section: 'Congregation', capability: 'EXPORT_REPORTS' },
-  { label: 'Administration', to: '/admin', icon: ShieldCheck, section: 'Administration', capability: 'ADMINISTER' },
-  { label: 'Help & privacy', to: '/help', icon: LifeBuoy, section: 'Support', capability: 'TRACK_SADHANA' },
+  { key: 'today', to: '/', icon: Sunrise, section: 'sadhana', capability: 'TRACK_SADHANA', primary: true },
+  { key: 'record', to: '/entry', icon: NotebookPen, section: 'sadhana', capability: 'TRACK_SADHANA', primary: true },
+  { key: 'week', to: '/week', icon: CalendarDays, section: 'sadhana', capability: 'TRACK_SADHANA', primary: true },
+  { key: 'history', to: '/history', icon: History, section: 'sadhana', capability: 'TRACK_SADHANA', primary: true },
+  { key: 'profile', to: '/profile', icon: UserRound, section: 'sadhana', capability: 'TRACK_SADHANA' },
+  { key: 'reminders', to: '/reminders', icon: BellRing, section: 'sadhana', capability: 'TRACK_SADHANA' },
+  { key: 'report', to: '/report', icon: Users, section: 'congregation', capability: 'VIEW_REPORTS' },
+  { key: 'masterAdmin', to: '/master-admin', icon: UserRoundPlus, section: 'congregation', capability: 'MANAGE_ACCOUNTS' },
+  { key: 'export', to: '/export', icon: Download, section: 'congregation', capability: 'EXPORT_REPORTS' },
+  { key: 'administration', to: '/admin', icon: ShieldCheck, section: 'administration', capability: 'ADMINISTER' },
+  { key: 'help', to: '/help', icon: LifeBuoy, section: 'support', capability: 'TRACK_SADHANA' },
 ]
 
 export function navItemsFor(role: Role): NavItem[] {

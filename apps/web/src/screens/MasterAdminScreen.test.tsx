@@ -93,8 +93,27 @@ describe('MasterAdminScreen', () => {
     expect(within(screen.getByRole('row', { name: /Rādhikā Devī Dāsī/ })).queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
+  it('keeps the library on its own page, one tab away from the devotees', async () => {
+    setMockSession(coordinator)
+    renderAt('/master-admin')
+    expect(await screen.findByRole('region', { name: 'Password reset requests' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Library' })).not.toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Library' }))
+    await expectLocation('/master-admin/library')
+    expect(await screen.findByRole('heading', { name: 'Library' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Library' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Password reset requests' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Devotees' })).toHaveAttribute('href', '/master-admin')
+  })
+
   it('sends a devotee back to today', async () => {
     renderAt('/master-admin')
+    await expectLocation('/')
+  })
+
+  it('keeps a devotee out of the library page too', async () => {
+    renderAt('/master-admin/library')
     await expectLocation('/')
   })
 })

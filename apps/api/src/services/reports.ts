@@ -1,4 +1,4 @@
-import type { MemberWeek, Report } from '@sadhana/contract'
+import type { EntryRecord, MemberWeek, Report } from '@sadhana/contract'
 import {
   dayStatus,
   resolveTarget,
@@ -12,9 +12,9 @@ import {
 } from '@sadhana/domain'
 import { and, asc, gte, inArray, lte } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { entries, targetChoices, type EntryRow } from '../db/schema'
+import { entries, targetChoices } from '../db/schema'
 import { activeAccounts } from './accounts'
-import { toRecord } from './entries'
+import { recordsFor } from './entries'
 import { recommendedHistory, toChoice } from './targets'
 
 const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
@@ -25,13 +25,14 @@ const add = (a: Target, b: Target): Target => ({
   hearingMinutes: a.hearingMinutes + b.hearingMinutes,
 })
 
-export async function entriesFor(db: Db, devoteeIds: string[], from: LocalDate, to: LocalDate): Promise<Map<string, EntryRow>> {
+export async function entriesFor(db: Db, devoteeIds: string[], from: LocalDate, to: LocalDate): Promise<Map<string, EntryRecord>> {
   if (devoteeIds.length === 0) return new Map()
   const rows = await db
     .select()
     .from(entries)
     .where(and(inArray(entries.devoteeId, devoteeIds), gte(entries.localDate, from), lte(entries.localDate, to)))
-  return new Map(rows.map((row) => [`${row.devoteeId}|${row.localDate}`, row]))
+  const records = await recordsFor(db, rows)
+  return new Map(rows.map((row, index) => [`${row.devoteeId}|${row.localDate}`, records[index] as EntryRecord]))
 }
 
 /** The congregation's week; `withRows` adds one row per devotee (numbers only, never reflections). */
@@ -54,14 +55,14 @@ export async function congregationReport(db: Db, weekStart: LocalDate, withRows:
 
   const weeks: MemberWeek[] = members.map((member) => {
     const days = dates.map((date) => records.get(`${member.devoteeId}|${date}`))
-    const present = days.filter((row): row is EntryRow => row !== undefined).map(toRecord)
+    const present = days.filter((record): record is EntryRecord => record !== undefined)
     const totals = sumTotals(present)
     const history = { recommended, personal: choices.get(member.devoteeId) ?? [] }
     const target = dates.reduce((sum, date) => add(sum, resolveTarget(history, date) ?? ZERO), ZERO)
     return {
       devoteeId: member.devoteeId,
       name: member.name,
-      days: days.map((row) => dayStatus(row && toRecord(row))),
+      days: days.map(dayStatus),
       totals,
       completion: targetCompletion(totals, target),
     }

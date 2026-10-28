@@ -1,8 +1,10 @@
 import {
   DailyEntrySchema,
   EffectiveTargetSchema,
+  HearingSessionSchema,
   LocalDateSchema,
   normalizePhone,
+  ReadingSessionSchema,
   RoleSchema,
   TargetChoiceSchema,
 } from '@sadhana/domain'
@@ -54,18 +56,33 @@ const optionalCode = z
 
 export const OtpRequestSchema = z.object({ phone: mobileNumber })
 
-export const BOOKS = [
-  'Bhagavad-gītā As It Is',
-  'Śrīmad-Bhāgavatam',
-  'Śrī Caitanya-caritāmṛta',
-  'The Nectar of Devotion',
-  'The Nectar of Instruction',
-  'Śrī Īśopaniṣad',
-  'Kṛṣṇa, the Supreme Personality of Godhead',
-  'Teachings of Lord Caitanya',
-  'The Science of Self-Realization',
-  'Śrī Brahma-saṁhitā',
-] as const
+/** The congregation's library: what devotees pick from when they record reading and hearing. */
+const libraryText = (message: string) => z.string().trim().min(1, message).max(200, 'Keep it shorter')
+
+export const BookInputSchema = z.object({ title: libraryText('Enter the book title') })
+export type BookInput = z.infer<typeof BookInputSchema>
+
+export const LectureInputSchema = z.object({
+  title: libraryText('Enter the lecture title'),
+  speaker: optionalText,
+  source: optionalText,
+})
+export type LectureInput = z.infer<typeof LectureInputSchema>
+
+/** `uses` counts the recorded sessions that point at the item; one in use can be renamed but not removed. */
+export const BookSchema = BookInputSchema.extend({ id: z.number().int(), uses: z.number().int() })
+export type Book = z.infer<typeof BookSchema>
+
+export const LectureSchema = LectureInputSchema.extend({ id: z.number().int(), uses: z.number().int() })
+export type Lecture = z.infer<typeof LectureSchema>
+
+export const LibrarySchema = z.object({ books: z.array(BookSchema), lectures: z.array(LectureSchema) })
+export type Library = z.infer<typeof LibrarySchema>
+
+export const LIBRARY_DUPLICATE = {
+  book: 'This book is already in the library.',
+  lecture: 'This lecture by this speaker is already in the library.',
+} as const
 
 export const SessionUserSchema = z.object({
   devoteeId: z.string(),
@@ -91,7 +108,19 @@ export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(8, 'Use at least 8 characters'),
 })
 
-export const EntryRecordSchema = DailyEntrySchema.extend({ updatedAt: z.string() })
+/** A saved session also carries the names behind its ids, so records read without another lookup. */
+export const ReadingRecordSchema = ReadingSessionSchema.extend({ bookTitle: z.string() })
+export const HearingRecordSchema = HearingSessionSchema.extend({
+  lectureTitle: z.string(),
+  speaker: z.string().optional(),
+  source: z.string().optional(),
+})
+
+export const EntryRecordSchema = DailyEntrySchema.extend({
+  updatedAt: z.string(),
+  reading: z.array(ReadingRecordSchema),
+  hearing: z.array(HearingRecordSchema),
+})
 export type EntryRecord = z.infer<typeof EntryRecordSchema>
 
 export const PutEntrySchema = DailyEntrySchema.extend({

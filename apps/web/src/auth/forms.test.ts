@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
+import { en } from '../i18n/en'
 import { LoginSchema, loginErrorMessage, NewPasswordSchema, ResetRequestSchema } from './forms'
 
 const messages = (result: { error?: { issues: { message: string }[] } }) =>
@@ -49,14 +50,14 @@ describe('NewPasswordSchema', () => {
 
 describe('loginErrorMessage', () => {
   it('explains each sign-in failure warmly', () => {
-    expect(loginErrorMessage(new ApiError(401))).toBe("That email or mobile number and password don't match. Please try again.")
-    expect(loginErrorMessage(new ApiError(403))).toBe('This account is inactive. Please speak with your coordinator.')
-    expect(loginErrorMessage(new ApiError(429))).toBe('Too many attempts. Please wait a few minutes and try again.')
+    expect(loginErrorMessage(en, new ApiError(401))).toBe("That email or mobile number and password don't match. Please try again.")
+    expect(loginErrorMessage(en, new ApiError(403))).toBe('This account is inactive. Please speak with your coordinator.')
+    expect(loginErrorMessage(en, new ApiError(429))).toBe('Too many attempts. Please wait a few minutes and try again.')
   })
 
   it('distinguishes a server problem from no connection', () => {
-    expect(loginErrorMessage(new ApiError(500))).toBe("We couldn't sign you in just now. Please try again in a moment.")
-    expect(loginErrorMessage(new TypeError('fetch failed'))).toBe(
+    expect(loginErrorMessage(en, new ApiError(500))).toBe("We couldn't sign you in just now. Please try again in a moment.")
+    expect(loginErrorMessage(en, new TypeError('fetch failed'))).toBe(
       "We couldn't reach the server. Check your connection and try again.",
     )
   })

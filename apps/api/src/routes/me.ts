@@ -8,7 +8,7 @@ import { requireAuth } from '../auth/middleware'
 import { accounts, entries, idempotencyKeys, reminders, targetChoices, type AccountRow } from '../db/schema'
 import { HttpError, validate } from '../http/errors'
 import { todayIn } from '../lib/dates'
-import { entriesBetween, toRecord } from '../services/entries'
+import { assertLibraryIds, entriesBetween, recordsFor, saveSessions } from '../services/entries'
 import { assertContactFree } from '../services/identity'
 import { consumeVerification } from '../services/otp'
 import { assertNotPast, targetHistory } from '../services/targets'
@@ -35,8 +35,7 @@ export function meRoutes(ctx: AppContext): Router {
 
   router.get('/entries', async (req, res) => {
     const { from, to } = validate(RangeSchema, req.query)
-    const rows = await entriesBetween(ctx.db, req.account.devoteeId, from, to)
-    res.json({ entries: rows.map(toRecord) })
+    res.json({ entries: await entriesBetween(ctx.db, req.account.devoteeId, from, to) })
   })
 
   router.put('/entries/:localDate', async (req, res) => {
@@ -61,6 +60,7 @@ export function meRoutes(ctx: AppContext): Router {
       throw new HttpError(400, { issues: [{ path: ['localDate'], message: 'Date does not match the URL' }] })
     }
     if (!isEditable(localDate, todayIn(req.account.timeZone))) throw new HttpError(422)
+    await assertLibraryIds(ctx.db, input)
 
     const record = await ctx.db.transaction(async (tx) => {
       const [current] = await tx
@@ -68,22 +68,19 @@ export function meRoutes(ctx: AppContext): Router {
         .from(entries)
         .where(and(eq(entries.devoteeId, devoteeId), eq(entries.localDate, localDate)))
       if (current && current.updatedAt.toISOString() !== input.baseUpdatedAt) {
-        throw new HttpError(409, { entry: toRecord(current) })
+        const [theirs] = await recordsFor(tx, [current])
+        throw new HttpError(409, { entry: theirs })
       }
-      const values = {
-        rounds: input.rounds,
-        reflection: input.reflection ?? null,
-        reading: input.reading,
-        hearing: input.hearing,
-        updatedAt: new Date(),
-      }
+      const values = { rounds: input.rounds, reflection: input.reflection ?? null, updatedAt: new Date() }
       const [saved] = await tx
         .insert(entries)
         .values({ devoteeId, localDate, ...values })
         .onConflictDoUpdate({ target: [entries.devoteeId, entries.localDate], set: values })
         .returning()
       if (!saved) throw new Error('Entry was not saved')
-      const response = toRecord(saved)
+      await saveSessions(tx, saved.id, input)
+      const [response] = await recordsFor(tx, [saved])
+      if (!response) throw new Error('Entry was not saved')
       if (key) await tx.insert(idempotencyKeys).values({ key, devoteeId, response }).onConflictDoNothing()
       return response
     })

@@ -1,5 +1,6 @@
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
+import { LanguageToggle } from './LanguageToggle'
 import { Wordmark } from './Wordmark'
 
 export function AuthCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
@@ -11,7 +12,10 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
         transition={{ duration: 0.4, ease: 'easeOut' }}
         className="w-full max-w-sm rounded-3xl bg-card p-7 shadow-float md:p-9"
       >
-        <Wordmark tagline={false} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Wordmark tagline={false} />
+          <LanguageToggle />
+        </div>
         <h1 className="mt-8 font-serif text-3xl text-ink">{title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">{subtitle}</p>
         <div className="mt-7">{children}</div>

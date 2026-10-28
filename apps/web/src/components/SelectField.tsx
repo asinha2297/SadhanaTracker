@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react'
+import { translateMessage, useT } from '../i18n'
 
 interface SelectFieldProps extends ComponentProps<'select'> {
   id: string
@@ -7,6 +8,7 @@ interface SelectFieldProps extends ComponentProps<'select'> {
 }
 
 export function SelectField({ id, label, error, children, ...select }: SelectFieldProps) {
+  const message = translateMessage(useT(), error)
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-ink">
@@ -19,7 +21,7 @@ export function SelectField({ id, label, error, children, ...select }: SelectFie
       >
         {children}
       </select>
-      {error && <p className="mt-1.5 text-sm text-red-700">{error}</p>}
+      {message && <p className="mt-1.5 text-sm text-red-700">{message}</p>}
     </div>
   )
 }

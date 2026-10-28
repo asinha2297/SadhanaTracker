@@ -2,25 +2,17 @@ import type { Role } from '@sadhana/domain'
 import { describe, expect, it } from 'vitest'
 import { navItemsFor } from './navigation'
 
-const labels = (role: Role) => navItemsFor(role).map((item) => item.label)
+const keys = (role: Role) => navItemsFor(role).map((item) => item.key)
 
 describe('navItemsFor', () => {
   it('gives a devotee only personal screens and help', () => {
-    expect(labels('DEVOTEE')).toEqual([
-      'Today',
-      'Record',
-      'Week',
-      'History',
-      'Profile & targets',
-      'Reminders',
-      'Help & privacy',
-    ])
+    expect(keys('DEVOTEE')).toEqual(['today', 'record', 'week', 'history', 'profile', 'reminders', 'help'])
   })
 
   it('adds the report, master admin and export for a coordinator, and administration only for an admin', () => {
-    expect(labels('COORDINATOR')).toEqual(expect.arrayContaining(['Report', 'Master admin', 'Export']))
-    expect(labels('COORDINATOR')).not.toContain('Administration')
-    expect(labels('ADMIN')).toEqual(expect.arrayContaining(['Report', 'Master admin', 'Export', 'Administration']))
+    expect(keys('COORDINATOR')).toEqual(expect.arrayContaining(['report', 'masterAdmin', 'export']))
+    expect(keys('COORDINATOR')).not.toContain('administration')
+    expect(keys('ADMIN')).toEqual(expect.arrayContaining(['report', 'masterAdmin', 'export', 'administration']))
   })
 
   it('marks exactly the four thumb-zone screens as primary', () => {

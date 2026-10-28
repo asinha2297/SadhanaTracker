@@ -15,13 +15,15 @@ import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { SendCode } from '../components/SendCode'
 import { EYEBROW } from '../components/styles'
 import { TextField } from '../components/TextField'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { shortDate, totalsLine } from '../lib/format'
 import { targetChoiceForm, toTargetChoice, type TargetFormValues } from './profile/targetForm'
 
 const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
 
 export function ProfileScreen() {
+  const t = useT()
   const profile = useQuery(profileQuery)
   const targets = useQuery(targetsQuery)
 
@@ -39,7 +41,7 @@ export function ProfileScreen() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-6 md:py-10">
-      <PageHeader title="Profile & targets" subtitle="Your details, and the standard you have set for yourself." />
+      <PageHeader title={t.profile.title} subtitle={t.profile.subtitle} />
       <ProfileForm profile={profile.data} />
       <TargetsCard history={targets.data} />
     </div>
@@ -57,6 +59,7 @@ const formValues = (profile: Profile): ProfileFormValues => ({
 })
 
 function ProfileForm({ profile }: { profile: Profile }) {
+  const t = useT()
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
   const [failure, setFailure] = useState<string>()
@@ -85,7 +88,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
       setSaved(true)
     } catch (error) {
       if (!applyFieldIssues(error, (field, message) => setError(field as ContactField, { message }))) {
-        setFailure("We couldn't save your profile. Check your connection and try again.")
+        setFailure(t.profile.saveFailed)
       }
     }
   })
@@ -94,40 +97,40 @@ function ProfileForm({ profile }: { profile: Profile }) {
     <Card>
       <form onSubmit={submit} noValidate className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-serif text-xl text-ink">Your details</h2>
-          <p className="text-xs text-ink-muted">ID {profile.devoteeId}</p>
+          <h2 className="font-serif text-xl text-ink">{t.profile.details}</h2>
+          <p className="text-xs text-ink-muted">{t.profile.id(profile.devoteeId)}</p>
         </div>
         <div>
           <p className="text-sm font-medium text-ink">{profile.name}</p>
-          <p className="text-xs text-ink-muted">An administrator can correct your name if it has changed.</p>
+          <p className="text-xs text-ink-muted">{t.profile.nameHint}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <TextField id="phone" label="Mobile number" type="tel" autoComplete="tel" error={errors.phone?.message} {...register('phone')} />
+            <TextField id="phone" label={t.profile.phone} type="tel" autoComplete="tel" error={errors.phone?.message} {...register('phone')} />
             {phoneChanged && <SendCode phone={phone} onPhoneError={(message) => setError('phone', { message })} />}
           </div>
-          <TextField id="email" label="Email" type="email" autoComplete="email" error={errors.email?.message} {...register('email')} />
+          <TextField id="email" label={t.profile.email} type="email" autoComplete="email" error={errors.email?.message} {...register('email')} />
         </div>
         {phoneChanged && (
           <TextField
             id="code"
-            label="Verification code"
+            label={t.profile.code}
             inputMode="numeric"
             autoComplete="one-time-code"
             error={errors.code?.message}
             {...register('code')}
           />
         )}
-        <p className="text-xs text-ink-muted">You sign in with your mobile number or email.</p>
-        <TextField id="address" label="Address" autoComplete="street-address" error={errors.address?.message} {...register('address')} />
+        <p className="text-xs text-ink-muted">{t.profile.signInHint}</p>
+        <TextField id="address" label={t.profile.address} autoComplete="street-address" error={errors.address?.message} {...register('address')} />
         <FormAlert message={failure} />
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={isSubmitting}>
-            Save profile
+            {t.profile.save}
           </Button>
           {saved && (
             <p role="status" className="text-sm font-medium text-tulasi">
-              Profile saved.
+              {t.profile.saved}
             </p>
           )}
         </div>
@@ -137,6 +140,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
 }
 
 function TargetsCard({ history }: { history: TargetHistory }) {
+  const t = useT()
+  const fmt = useFormat()
   const today = todayLocalDate()
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
@@ -162,6 +167,7 @@ function TargetsCard({ history }: { history: TargetHistory }) {
     },
   })
   const kind = useWatch({ control, name: 'kind' })
+  const kindLabel = (choice: 'PERSONAL' | 'RECOMMENDED') => (choice === 'PERSONAL' ? t.profile.personal : t.profile.recommended)
 
   const submit = handleSubmit(async (values) => {
     setSaved(false)
@@ -170,36 +176,37 @@ function TargetsCard({ history }: { history: TargetHistory }) {
       queryClient.setQueryData(targetsQuery.queryKey, await postTargetChoice(toTargetChoice(values)))
       setSaved(true)
     } catch {
-      setFailure("We couldn't save your target. Check your connection and try again.")
+      setFailure(t.profile.targetFailed)
     }
   })
 
   return (
     <Card>
-      <h2 className="font-serif text-xl text-ink">Targets</h2>
+      <h2 className="font-serif text-xl text-ink">{t.profile.targets}</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Your target today · <span className="font-medium text-ink">{activeChoice?.kind === 'PERSONAL' ? 'Personal' : 'Recommended'}</span>
+        {t.profile.targetToday}
+        <span className="font-medium text-ink">{kindLabel(activeChoice?.kind ?? 'RECOMMENDED')}</span>
       </p>
-      <p className="mt-1 font-medium text-ink">{totalsLine(current)}</p>
-      <p className="mt-2 text-xs text-ink-muted">The congregation recommends {totalsLine(recommended)}.</p>
+      <p className="mt-1 font-medium text-ink">{fmt.totals(current)}</p>
+      <p className="mt-2 text-xs text-ink-muted">{t.profile.congregationRecommends(fmt.totals(recommended))}</p>
 
       <form onSubmit={submit} noValidate className="mt-5 space-y-4">
         <fieldset className="space-y-2">
-          <legend className="sr-only">Target source</legend>
+          <legend className="sr-only">{t.profile.targetSource}</legend>
           <label className="flex items-center gap-3 text-sm text-ink">
             <input type="radio" value="RECOMMENDED" className="accent-saffron" {...register('kind')} />
-            Follow the congregation's recommended target
+            {t.profile.followRecommended}
           </label>
           <label className="flex items-center gap-3 text-sm text-ink">
             <input type="radio" value="PERSONAL" className="accent-saffron" {...register('kind')} />
-            Set a personal target
+            {t.profile.setPersonal}
           </label>
         </fieldset>
         {kind === 'PERSONAL' && (
           <div className="grid gap-3 sm:grid-cols-3">
             <TextField
               id="target-rounds"
-              label="Rounds per day"
+              label={t.profile.roundsPerDay}
               type="number"
               inputMode="numeric"
               min={0}
@@ -208,7 +215,7 @@ function TargetsCard({ history }: { history: TargetHistory }) {
             />
             <TextField
               id="target-reading"
-              label="Reading minutes per day"
+              label={t.profile.readingPerDay}
               type="number"
               inputMode="numeric"
               min={0}
@@ -217,7 +224,7 @@ function TargetsCard({ history }: { history: TargetHistory }) {
             />
             <TextField
               id="target-hearing"
-              label="Hearing minutes per day"
+              label={t.profile.hearingPerDay}
               type="number"
               inputMode="numeric"
               min={0}
@@ -228,21 +235,21 @@ function TargetsCard({ history }: { history: TargetHistory }) {
         )}
         <TextField
           id="effectiveDate"
-          label="Effective from"
+          label={t.profile.effectiveFrom}
           type="date"
           min={today}
           error={errors.effectiveDate?.message}
           {...register('effectiveDate')}
         />
-        <p className="text-xs text-ink-muted">Earlier days keep the target that was active then.</p>
+        <p className="text-xs text-ink-muted">{t.profile.earlierDays}</p>
         <FormAlert message={failure} />
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={isSubmitting}>
-            Save target
+            {t.profile.saveTarget}
           </Button>
           {saved && (
             <p role="status" className="text-sm font-medium text-tulasi">
-              Target saved.
+              {t.profile.targetSaved}
             </p>
           )}
         </div>
@@ -250,14 +257,12 @@ function TargetsCard({ history }: { history: TargetHistory }) {
 
       {choices.length > 0 && (
         <div className="mt-6 border-t border-line pt-4">
-          <p className={EYEBROW}>Your changes</p>
+          <p className={EYEBROW}>{t.profile.yourChanges}</p>
           <ul className="mt-2 space-y-1.5 text-sm">
             {choices.map((choice) => (
               <li key={`${choice.effectiveDate}-${choice.kind}`} className="flex flex-wrap justify-between gap-2">
-                <span className="text-ink">
-                  {choice.kind === 'PERSONAL' ? 'Personal' : 'Recommended'} · from {shortDate(choice.effectiveDate)}
-                </span>
-                <span className="text-ink-muted">{totalsLine(choice.kind === 'PERSONAL' ? choice.target : recommended)}</span>
+                <span className="text-ink">{t.profile.fromDate(kindLabel(choice.kind), fmt.shortDate(choice.effectiveDate))}</span>
+                <span className="text-ink-muted">{fmt.totals(choice.kind === 'PERSONAL' ? choice.target : recommended)}</span>
               </li>
             ))}
           </ul>

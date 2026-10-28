@@ -1,6 +1,5 @@
 import type { DailyEntry, EffectiveTarget, LocalDate, Role, TargetChoice } from '@sadhana/domain'
 import type { AuditEvent, PendingReset } from '@sadhana/contract'
-import { BOOKS } from '@sadhana/contract'
 
 export const PASSWORD = 'haribol'
 export const TEMPORARY_PASSWORD = 'temp-1234'
@@ -116,15 +115,40 @@ export const AUDIT: AuditEvent[] = [
   },
 ]
 
-const LECTURES = [
-  'Bhagavad-gītā class',
-  'Śrīmad-Bhāgavatam class',
-  'Sunday feast lecture',
-  'Japa workshop',
-  'Caitanya-caritāmṛta reading',
-] as const
-const SPEAKERS = ['Śrīla Prabhupāda', 'Temple president', 'Visiting speaker', 'Govinda Dāsa'] as const
-const SOURCES = ['Temple', 'Vanipedia', 'YouTube', 'Audio archive'] as const
+export interface LibraryBook {
+  id: number
+  title: string
+}
+
+export interface LibraryLecture {
+  id: number
+  title: string
+  speaker?: string
+  source?: string
+}
+
+/** The demo library; the seed inserts these in order, so the ids hold on a fresh database. */
+export const BOOKS: LibraryBook[] = [
+  'Bhagavad-gītā As It Is',
+  'Śrīmad-Bhāgavatam',
+  'Śrī Caitanya-caritāmṛta',
+  'The Nectar of Devotion',
+  'The Nectar of Instruction',
+  'Śrī Īśopaniṣad',
+  'Kṛṣṇa, the Supreme Personality of Godhead',
+  'Teachings of Lord Caitanya',
+  'The Science of Self-Realization',
+  'Śrī Brahma-saṁhitā',
+].map((title, index) => ({ id: index + 1, title }))
+
+export const LECTURES: LibraryLecture[] = [
+  { id: 1, title: 'Bhagavad-gītā class', speaker: 'Śrīla Prabhupāda', source: 'Vanipedia' },
+  { id: 2, title: 'Śrīmad-Bhāgavatam class', speaker: 'Temple president', source: 'Temple' },
+  { id: 3, title: 'Sunday feast lecture', speaker: 'Visiting speaker', source: 'YouTube' },
+  { id: 4, title: 'Japa workshop', speaker: 'Govinda Dāsa', source: 'Temple' },
+  { id: 5, title: 'Caitanya-caritāmṛta reading', speaker: 'Śrīla Prabhupāda', source: 'Audio archive' },
+]
+
 const REFLECTIONS = [
   'Chanting felt focused today.',
   'Mind wandered during the first rounds; steadier later.',
@@ -164,7 +188,7 @@ export function generatedEntry(devoteeId: string, localDate: LocalDate): DailyEn
       readingRoll < 0.75
         ? [
             {
-              bookTitle: pick(BOOKS, readingRoll),
+              bookId: pick(BOOKS, readingRoll).id,
               chapterOrSection: readingRoll < 0.4 ? `Chapter ${1 + Math.floor(readingRoll * 30)}` : undefined,
               minutes: 10 + Math.floor(roll(devoteeId, localDate, 'reading-minutes') * 31),
             },
@@ -174,9 +198,7 @@ export function generatedEntry(devoteeId: string, localDate: LocalDate): DailyEn
       hearingRoll < 0.6
         ? [
             {
-              lectureTitle: pick(LECTURES, hearingRoll),
-              speaker: pick(SPEAKERS, hearingRoll),
-              source: pick(SOURCES, hearingRoll),
+              lectureId: pick(LECTURES, hearingRoll).id,
               minutes: 15 + Math.floor(roll(devoteeId, localDate, 'hearing-minutes') * 46),
             },
           ]

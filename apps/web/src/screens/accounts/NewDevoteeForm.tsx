@@ -11,7 +11,7 @@ import { Card } from '../../components/Card'
 import { FormAlert } from '../../components/FormAlert'
 import { SelectField } from '../../components/SelectField'
 import { TextField } from '../../components/TextField'
-import { ROLE_LABELS } from '../../lib/roles'
+import { useT } from '../../i18n'
 import { PasswordHandover } from './PasswordHandover'
 
 type FormValues = z.input<typeof NewDevoteeSchema>
@@ -20,6 +20,7 @@ const blank = (): FormValues => ({ name: '', phone: '', email: '', role: 'DEVOTE
 
 /** Every account starts here, with a one-time password to hand over in person; only administrators may create leaders. */
 export function NewDevoteeForm({ canCreateLeaders, onCreated }: { canCreateLeaders: boolean; onCreated: () => Promise<void> }) {
+  const t = useT()
   const [created, setCreated] = useState<CreatedDevotee>()
   const [failure, setFailure] = useState<string>()
   const {
@@ -38,29 +39,29 @@ export function NewDevoteeForm({ canCreateLeaders, onCreated }: { canCreateLeade
       await onCreated()
     } catch (error) {
       if (!applyFieldIssues(error, (field, message) => setError(field as 'phone' | 'email', { message }))) {
-        setFailure("We couldn't create the account. Check your connection and try again.")
+        setFailure(t.masterAdmin.createFailed)
       }
     }
   })
 
   return (
     <Card>
-      <h2 className="font-serif text-xl text-ink">Add a devotee</h2>
+      <h2 className="font-serif text-xl text-ink">{t.masterAdmin.addDevotee}</h2>
       <form onSubmit={submit} noValidate className="mt-3 grid gap-3 sm:grid-cols-3 sm:items-end">
-        <TextField id="newName" label="Name" autoComplete="off" error={errors.name?.message} {...register('name')} />
-        <TextField id="newPhone" label="Mobile number" type="tel" autoComplete="off" error={errors.phone?.message} {...register('phone')} />
-        <TextField id="newEmail" label="Email (optional)" type="email" autoComplete="off" error={errors.email?.message} {...register('email')} />
+        <TextField id="newName" label={t.masterAdmin.name} autoComplete="off" error={errors.name?.message} {...register('name')} />
+        <TextField id="newPhone" label={t.masterAdmin.phone} type="tel" autoComplete="off" error={errors.phone?.message} {...register('phone')} />
+        <TextField id="newEmail" label={t.masterAdmin.emailOptional} type="email" autoComplete="off" error={errors.email?.message} {...register('email')} />
         {canCreateLeaders && (
-          <SelectField id="newRole" label="Role" error={errors.role?.message} {...register('role')}>
+          <SelectField id="newRole" label={t.masterAdmin.role} error={errors.role?.message} {...register('role')}>
             {RoleSchema.options.map((role) => (
               <option key={role} value={role}>
-                {ROLE_LABELS[role]}
+                {t.roles[role]}
               </option>
             ))}
           </SelectField>
         )}
         <Button type="submit" disabled={isSubmitting} className="sm:mb-px sm:justify-self-start">
-          Create account
+          {t.masterAdmin.createAccount}
         </Button>
       </form>
       <div className="mt-3 space-y-3">

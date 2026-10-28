@@ -9,9 +9,11 @@ import { AuthCard } from '../components/AuthCard'
 import { Button } from '../components/Button'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { useT } from '../i18n'
 
 export function LoginScreen() {
   const { setUser } = useAuth()
+  const t = useT()
   const [failure, setFailure] = useState<string>()
   const {
     register,
@@ -24,17 +26,17 @@ export function LoginScreen() {
     try {
       setUser(await login(input))
     } catch (error) {
-      setFailure(loginErrorMessage(error))
+      setFailure(loginErrorMessage(t, error))
     }
   })
 
   return (
-    <AuthCard title="Haribol." subtitle="Sign in to record today's sadhana.">
+    <AuthCard title={t.auth.loginTitle} subtitle={t.auth.loginSubtitle}>
       <form onSubmit={submit} noValidate className="space-y-5">
         <FormAlert message={failure} />
         <TextField
           id="identifier"
-          label="Email or mobile number"
+          label={t.auth.identifier}
           autoComplete="username"
           autoCapitalize="none"
           inputMode="email"
@@ -44,18 +46,18 @@ export function LoginScreen() {
         />
         <TextField
           id="password"
-          label="Password"
+          label={t.auth.password}
           type="password"
           autoComplete="current-password"
           error={errors.password?.message}
           {...register('password')}
         />
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
+          {isSubmitting ? t.auth.signingIn : t.auth.signIn}
         </Button>
         <p className="text-center text-sm">
           <Link to="/reset" className="font-medium text-saffron-text">
-            Forgotten your password?
+            {t.auth.forgotten}
           </Link>
         </p>
       </form>

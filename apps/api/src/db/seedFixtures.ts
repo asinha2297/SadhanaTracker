@@ -1,5 +1,5 @@
-import { addDays } from '@sadhana/domain'
-import { ACCOUNTS, AUDIT, generatedEntry, PERSONAL, RECOMMENDED, RESET_REQUESTS } from '@sadhana/fixtures'
+import { addDays, type DailyEntry } from '@sadhana/domain'
+import { ACCOUNTS, AUDIT, BOOKS, generatedEntry, LECTURES, PERSONAL, RECOMMENDED, RESET_REQUESTS } from '@sadhana/fixtures'
 import { hashPassword } from '../auth/password'
 import type { ArgonOptions, Config } from '../config'
 import { todayIn } from '../lib/dates'
@@ -74,24 +74,54 @@ export async function seedFixtures(db: Db, options: SeedOptions): Promise<void> 
     })),
   )
 
+  // In fixture order, so a fresh database hands out the ids the fixtures' entries point at.
+  await db.insert(t.books).values(BOOKS.map((book) => ({ title: book.title })))
+  await db.insert(t.lectures).values(
+    LECTURES.map((lecture) => ({ title: lecture.title, speaker: lecture.speaker ?? null, source: lecture.source ?? null })),
+  )
+
   const today = todayIn('Asia/Kolkata')
-  const rows: (typeof t.entries.$inferInsert)[] = []
+  const days: { row: typeof t.entries.$inferInsert; entry: DailyEntry }[] = []
   for (const account of ACCOUNTS.filter((candidate) => candidate.active)) {
     for (let date = addDays(today, -options.entryDays); date < today; date = addDays(date, 1)) {
       const entry = generatedEntry(account.devoteeId, date)
       if (!entry) continue
-      rows.push({
-        devoteeId: account.devoteeId,
-        localDate: date,
-        rounds: entry.rounds,
-        reflection: entry.reflection ?? null,
-        reading: entry.reading,
-        hearing: entry.hearing,
-        updatedAt: new Date(`${date}T16:30:00.000Z`),
+      days.push({
+        entry,
+        row: {
+          devoteeId: account.devoteeId,
+          localDate: date,
+          rounds: entry.rounds,
+          reflection: entry.reflection ?? null,
+          updatedAt: new Date(`${date}T16:30:00.000Z`),
+        },
       })
     }
   }
-  for (let start = 0; start < rows.length; start += 200) {
-    await db.insert(t.entries).values(rows.slice(start, start + 200))
+  for (let start = 0; start < days.length; start += 200) {
+    const batch = days.slice(start, start + 200)
+    const saved = await db
+      .insert(t.entries)
+      .values(batch.map((day) => day.row))
+      .returning({ id: t.entries.id })
+    const reading = batch.flatMap((day, index) =>
+      day.entry.reading.map((session, position) => ({
+        entryId: (saved[index] as { id: number }).id,
+        position,
+        bookId: session.bookId,
+        chapterOrSection: session.chapterOrSection ?? null,
+        minutes: session.minutes,
+      })),
+    )
+    const hearing = batch.flatMap((day, index) =>
+      day.entry.hearing.map((session, position) => ({
+        entryId: (saved[index] as { id: number }).id,
+        position,
+        lectureId: session.lectureId,
+        minutes: session.minutes,
+      })),
+    )
+    if (reading.length) await db.insert(t.readingSessions).values(reading)
+    if (hearing.length) await db.insert(t.hearingSessions).values(hearing)
   }
 }

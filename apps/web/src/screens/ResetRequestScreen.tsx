@@ -8,16 +8,10 @@ import { AuthCard } from '../components/AuthCard'
 import { Button } from '../components/Button'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
-
-const backToSignIn = (
-  <p className="text-center text-sm">
-    <Link to="/login" className="font-medium text-saffron-text">
-      Back to sign in
-    </Link>
-  </p>
-)
+import { useT } from '../i18n'
 
 export function ResetRequestScreen() {
+  const t = useT()
   const [sent, setSent] = useState(false)
   const [failure, setFailure] = useState<string>()
   const {
@@ -32,31 +26,33 @@ export function ResetRequestScreen() {
       await requestReset(identifier)
       setSent(true)
     } catch {
-      setFailure("We couldn't send your request. Check your connection and try again.")
+      setFailure(t.auth.resetFailed)
     }
   })
 
+  const backToSignIn = (
+    <p className="text-center text-sm">
+      <Link to="/login" className="font-medium text-saffron-text">
+        {t.auth.backToSignIn}
+      </Link>
+    </p>
+  )
+
   if (sent) {
     return (
-      <AuthCard
-        title="Request received"
-        subtitle="If that account exists, your coordinator or an administrator will share a one-time password with you in person."
-      >
+      <AuthCard title={t.auth.requestReceived} subtitle={t.auth.requestReceivedSubtitle}>
         {backToSignIn}
       </AuthCard>
     )
   }
 
   return (
-    <AuthCard
-      title="Forgotten your password?"
-      subtitle="Enter the email or mobile number you sign in with. Your coordinator or an administrator will share a one-time password with you in person; nobody can see your current one."
-    >
+    <AuthCard title={t.auth.forgotten} subtitle={t.auth.resetSubtitle}>
       <form onSubmit={submit} noValidate className="space-y-5">
         <FormAlert message={failure} />
         <TextField
           id="identifier"
-          label="Email or mobile number"
+          label={t.auth.identifier}
           autoComplete="username"
           autoCapitalize="none"
           inputMode="email"
@@ -65,7 +61,7 @@ export function ResetRequestScreen() {
           {...register('identifier')}
         />
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Sending…' : 'Request one-time password'}
+          {isSubmitting ? t.auth.sending : t.auth.requestReset}
         </Button>
         {backToSignIn}
       </form>

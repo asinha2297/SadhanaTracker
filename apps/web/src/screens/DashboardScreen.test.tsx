@@ -24,7 +24,7 @@ describe('DashboardScreen', () => {
     seedEntry(devotee.devoteeId, {
       localDate: '2026-10-24',
       rounds: 12,
-      reading: [{ bookTitle: 'Śrīmad-Bhāgavatam', minutes: 20 }],
+      reading: [{ bookId: 2, minutes: 20 }],
       hearing: [],
     })
     renderAt('/')

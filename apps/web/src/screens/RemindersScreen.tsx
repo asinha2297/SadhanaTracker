@@ -11,6 +11,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { EYEBROW } from '../components/styles'
 import { TextField } from '../components/TextField'
+import { useT } from '../i18n'
 import { deviceTimeZone } from '../lib/clock'
 
 const ZONES = [
@@ -24,18 +25,20 @@ const ZONES = [
 ]
 
 export function RemindersScreen() {
+  const t = useT()
   const reminders = useQuery(remindersQuery)
   if (reminders.isError) return <ScreenError onRetry={() => void reminders.refetch()} />
   if (reminders.isPending) return <ScreenLoading />
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-6 md:py-10">
-      <PageHeader title="Reminders" subtitle="A gentle nudge, only while today's sadhana is still unrecorded." />
+      <PageHeader title={t.reminders.title} subtitle={t.reminders.subtitle} />
       <RemindersForm reminders={reminders.data} />
     </div>
   )
 }
 
 function RemindersForm({ reminders }: { reminders: Reminders }) {
+  const t = useT()
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
   const [failure, setFailure] = useState<string>()
@@ -55,7 +58,7 @@ function RemindersForm({ reminders }: { reminders: Reminders }) {
       queryClient.setQueryData(remindersQuery.queryKey, await putReminders(input))
       setSaved(true)
     } catch {
-      setFailure("We couldn't save your reminders. Check your connection and try again.")
+      setFailure(t.reminders.failed)
     }
   })
 
@@ -64,18 +67,16 @@ function RemindersForm({ reminders }: { reminders: Reminders }) {
       <form onSubmit={submit} noValidate className="space-y-5">
         <label className="flex items-center justify-between gap-4">
           <span>
-            <span className="block font-medium text-ink">Remind me to record my sadhana</span>
-            <span className="block text-sm text-ink-muted">
-              Shown when you open the app after the time below and today is still missing.
-            </span>
+            <span className="block font-medium text-ink">{t.reminders.remindMe}</span>
+            <span className="block text-sm text-ink-muted">{t.reminders.remindHint}</span>
           </span>
           <input type="checkbox" className="size-5 shrink-0 accent-saffron" {...register('enabled')} />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField id="reminderTime" label="Reminder time" type="time" disabled={!enabled} error={errors.time?.message} {...register('time')} />
+          <TextField id="reminderTime" label={t.reminders.time} type="time" disabled={!enabled} error={errors.time?.message} {...register('time')} />
           <TextField
             id="timeZone"
-            label="Time zone"
+            label={t.reminders.timeZone}
             list="timezones"
             disabled={!enabled}
             error={errors.timeZone?.message}
@@ -88,24 +89,24 @@ function RemindersForm({ reminders }: { reminders: Reminders }) {
           </datalist>
         </div>
         <fieldset className="space-y-2">
-          <legend className={EYEBROW}>Channel</legend>
+          <legend className={EYEBROW}>{t.reminders.channel}</legend>
           <label className="flex items-center gap-3 text-sm text-ink">
             <input type="radio" value="IN_APP" className="accent-saffron" {...register('channel')} />
-            In-app, when you open the app
+            {t.reminders.inApp}
           </label>
           <label className="flex items-center gap-3 text-sm text-ink-muted">
             <input type="radio" disabled />
-            Web push notifications · coming later
+            {t.reminders.push}
           </label>
         </fieldset>
         <FormAlert message={failure} />
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={isSubmitting}>
-            Save reminders
+            {t.reminders.save}
           </Button>
           {saved && (
             <p role="status" className="text-sm font-medium text-tulasi">
-              Reminders saved.
+              {t.reminders.saved}
             </p>
           )}
         </div>

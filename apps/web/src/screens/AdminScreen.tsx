@@ -13,15 +13,16 @@ import { PageHeader } from '../components/PageHeader'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { EYEBROW } from '../components/styles'
 import { TextField } from '../components/TextField'
-import { auditLabel } from '../lib/audit'
+import { renderRich, useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { instantLabel, shortDate, totalsLine } from '../lib/format'
 
 const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
 
 type RecommendedForm = Target & { effectiveDate: LocalDate }
 
 export function AdminScreen() {
+  const t = useT()
   const targets = useQuery(targetsQuery)
   const audit = useQuery(auditQuery)
 
@@ -39,7 +40,7 @@ export function AdminScreen() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-6 md:py-10">
-      <PageHeader title="Administration" subtitle="Congregation defaults and the security audit log." />
+      <PageHeader title={t.admin.title} subtitle={t.admin.subtitle} />
       <RecommendedTargets recommended={targets.data.recommended} />
       <AuditLog events={audit.data} />
     </div>
@@ -47,6 +48,8 @@ export function AdminScreen() {
 }
 
 function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] }) {
+  const t = useT()
+  const fmt = useFormat()
   const today = todayLocalDate()
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
@@ -75,21 +78,21 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] })
       setSaved(true)
     } catch {
-      setFailure("We couldn't save the target. Check your connection and try again.")
+      setFailure(t.admin.failed)
     }
   })
 
   return (
     <Card>
-      <h2 className="font-serif text-xl text-ink">Recommended targets</h2>
+      <h2 className="font-serif text-xl text-ink">{t.admin.recommended}</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Today the congregation recommends <span className="font-medium text-ink">{totalsLine(current)}</span>.
+        {renderRich(t.admin.todayRecommends, { totals: <span className="font-medium text-ink">{fmt.totals(current)}</span> })}
       </p>
       <form onSubmit={submit} noValidate className="mt-4 space-y-4">
         <div className="grid gap-3 sm:grid-cols-4">
           <TextField
             id="recommended-rounds"
-            label="Rounds"
+            label={t.admin.rounds}
             type="number"
             inputMode="numeric"
             min={0}
@@ -98,7 +101,7 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
           />
           <TextField
             id="recommended-reading"
-            label="Reading minutes"
+            label={t.admin.readingMinutes}
             type="number"
             inputMode="numeric"
             min={0}
@@ -107,7 +110,7 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
           />
           <TextField
             id="recommended-hearing"
-            label="Hearing minutes"
+            label={t.admin.hearingMinutes}
             type="number"
             inputMode="numeric"
             min={0}
@@ -116,33 +119,33 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
           />
           <TextField
             id="recommended-from"
-            label="Effective from"
+            label={t.admin.effectiveFrom}
             type="date"
             min={today}
             error={errors.effectiveDate?.message}
             {...register('effectiveDate')}
           />
         </div>
-        <p className="text-xs text-ink-muted">Past weeks keep the target that was active then; nothing is recalculated.</p>
+        <p className="text-xs text-ink-muted">{t.admin.pastWeeks}</p>
         <FormAlert message={failure} />
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={isSubmitting}>
-            Save recommended target
+            {t.admin.save}
           </Button>
           {saved && (
             <p role="status" className="text-sm font-medium text-tulasi">
-              Recommended target saved.
+              {t.admin.saved}
             </p>
           )}
         </div>
       </form>
       <div className="mt-6 border-t border-line pt-4">
-        <p className={EYEBROW}>History</p>
+        <p className={EYEBROW}>{t.admin.history}</p>
         <ul className="mt-2 space-y-1.5 text-sm">
           {history.map((item) => (
             <li key={item.effectiveDate} className="flex flex-wrap justify-between gap-2">
-              <span className="text-ink">From {shortDate(item.effectiveDate)}</span>
-              <span className="text-ink-muted">{totalsLine(item.target)}</span>
+              <span className="text-ink">{t.admin.from(fmt.shortDate(item.effectiveDate))}</span>
+              <span className="text-ink-muted">{fmt.totals(item.target)}</span>
             </li>
           ))}
         </ul>
@@ -152,24 +155,27 @@ function RecommendedTargets({ recommended }: { recommended: EffectiveTarget[] })
 }
 
 function AuditLog({ events }: { events: AuditEvent[] }) {
+  const t = useT()
+  const fmt = useFormat()
+  const label = (action: string) => t.admin.audit[action] ?? action.toLowerCase().replaceAll('_', ' ')
   return (
     <Card>
-      <h2 className="font-serif text-xl text-ink">Audit log</h2>
-      <p className="mt-1 text-xs text-ink-muted">Every security-relevant action, permanent and newest first.</p>
-      <ul aria-label="Audit log" className="mt-3 divide-y divide-line">
+      <h2 className="font-serif text-xl text-ink">{t.admin.auditLog}</h2>
+      <p className="mt-1 text-xs text-ink-muted">{t.admin.auditHint}</p>
+      <ul aria-label={t.admin.auditLog} className="mt-3 divide-y divide-line">
         {events.map((event) => (
           <li key={event.id} className="py-2.5 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="font-medium text-ink">
-                {auditLabel(event.action)}
+                {label(event.action)}
                 {event.subject && <span className="font-normal text-ink-muted"> · {event.subject}</span>}
               </span>
               <time dateTime={event.at} className="text-xs text-ink-muted">
-                {instantLabel(event.at)}
+                {fmt.instant(event.at)}
               </time>
             </div>
             <p className="text-xs text-ink-muted">
-              by {event.actor}
+              {t.admin.by(event.actor)}
               {event.details && ` · ${event.details}`}
             </p>
           </li>

@@ -18,10 +18,12 @@ import { AnimatedNumber } from '../components/AnimatedNumber'
 import { Card } from '../components/Card'
 import { Ring } from '../components/Ring'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
-import { STATUS_DOT, STATUS_LABELS, StatusBadge } from '../components/StatusBadge'
+import { STATUS_DOT, StatusBadge } from '../components/StatusBadge'
 import { EYEBROW } from '../components/styles'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { firstName, longDate, totalsLine, weekdayShort } from '../lib/format'
+import { firstName } from '../lib/format'
 import { rise, stagger } from '../lib/motion'
 import { isReminderDue } from '../lib/reminders'
 import { verseFor } from '../lib/verses'
@@ -32,6 +34,8 @@ const ZERO: Target = { rounds: 0, readingMinutes: 0, hearingMinutes: 0 }
 
 export function DashboardScreen() {
   const user = useUser()
+  const t = useT()
+  const fmt = useFormat()
   const today = todayLocalDate()
   const { query, entries, pendingDates } = useEntries(addDays(today, -LOOKBACK_DAYS), today)
   const targets = useQuery(targetsQuery)
@@ -55,14 +59,14 @@ export function DashboardScreen() {
   const target = resolveTarget(targets.data, today) ?? ZERO
   const totals = todayEntry ? dailyTotals(todayEntry) : ZERO
   const completion = targetCompletion(totals, target)
-  const verse = verseFor(today)
+  const verse = verseFor(t, today)
   const due = reminders.data !== undefined && isReminderDue(reminders.data, new Date(), status)
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="mx-auto max-w-3xl space-y-5 py-6 md:py-10">
       <motion.header variants={rise}>
-        <p className="text-sm text-ink-muted">{longDate(today)}</p>
-        <h1 className="mt-1 font-serif text-3xl text-ink md:text-4xl">Haribol, {firstName(user.name)}.</h1>
+        <p className="text-sm text-ink-muted">{fmt.longDate(today)}</p>
+        <h1 className="mt-1 font-serif text-3xl text-ink md:text-4xl">{t.dashboard.greeting(firstName(user.name))}</h1>
         <p className="mt-3 max-w-xl font-serif text-lg italic leading-snug text-ink-muted">
           “{verse.text}” <span className="text-sm not-italic">— {verse.source}</span>
         </p>
@@ -72,9 +76,9 @@ export function DashboardScreen() {
         <motion.div variants={rise}>
           <Card className="flex items-center gap-4 border-saffron/30 bg-saffron/8">
             <BellRing className="size-5 shrink-0 text-saffron" aria-hidden />
-            <p className="flex-1 text-sm text-ink">A gentle reminder: today's sadhana isn't recorded yet.</p>
+            <p className="flex-1 text-sm text-ink">{t.dashboard.reminder}</p>
             <Link to="/entry" className="text-sm font-semibold text-saffron-text">
-              Record now
+              {t.dashboard.recordNow}
             </Link>
           </Card>
         </motion.div>
@@ -82,50 +86,52 @@ export function DashboardScreen() {
 
       <motion.div variants={rise} className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <p className={EYEBROW}>Today</p>
+          <p className={EYEBROW}>{t.dashboard.today}</p>
           <div className="mt-3 flex items-center gap-2">
-            <StatusBadge status={status} label={status === 'MISSING' ? 'Not yet recorded' : undefined} />
-            {pendingDates.has(today) && <span className="text-xs font-medium text-saffron-text">Pending sync</span>}
+            <StatusBadge status={status} label={status === 'MISSING' ? t.status.notYetRecorded : undefined} />
+            {pendingDates.has(today) && <span className="text-xs font-medium text-saffron-text">{t.status.pendingSync}</span>}
           </div>
-          <p className="mt-3 text-sm text-ink-muted">
-            {status === 'MISSING' ? "Record today's sadhana in under two minutes." : totalsLine(totals)}
-          </p>
+          <p className="mt-3 text-sm text-ink-muted">{status === 'MISSING' ? t.dashboard.recordPrompt : fmt.totals(totals)}</p>
           <Link
             to="/entry"
             className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-saffron px-5 py-2.5 text-sm font-semibold text-white"
           >
-            {status === 'MISSING' ? "Record today's sadhana" : "Update today's record"}
+            {status === 'MISSING' ? t.dashboard.record : t.dashboard.update}
             <ChevronRight className="size-4" aria-hidden />
           </Link>
         </Card>
         <Card>
-          <p className={EYEBROW}>Streak</p>
-          <p aria-label="Current streak" className="mt-3 font-serif text-5xl text-ink">
-            <AnimatedNumber value={streak(entries, today)} /> <span className="text-lg text-ink-muted">days</span>
+          <p className={EYEBROW}>{t.dashboard.streak}</p>
+          <p aria-label={t.dashboard.currentStreak} className="mt-3 font-serif text-5xl text-ink">
+            <AnimatedNumber value={streak(entries, today)} /> <span className="text-lg text-ink-muted">{t.dashboard.days}</span>
           </p>
-          <p className="mt-2 text-sm text-ink-muted">Consecutive days with any japa, reading or hearing.</p>
+          <p className="mt-2 text-sm text-ink-muted">{t.dashboard.streakHint}</p>
         </Card>
       </motion.div>
 
       <motion.div variants={rise}>
         <Card>
           <div className="flex items-baseline justify-between">
-            <p className={EYEBROW}>Today's targets</p>
+            <p className={EYEBROW}>{t.dashboard.targets}</p>
             <Link to="/profile" className="text-xs font-semibold text-saffron-text">
-              Adjust
+              {t.dashboard.adjust}
             </Link>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <Ring percent={completion.rounds} label="Japa" caption={`${totals.rounds} of ${target.rounds} rounds`} />
+            <Ring
+              percent={completion.rounds}
+              label={t.practices.japa}
+              caption={t.dashboard.ofRounds(fmt.number(totals.rounds), fmt.number(target.rounds))}
+            />
             <Ring
               percent={completion.readingMinutes}
-              label="Reading"
-              caption={`${totals.readingMinutes} of ${target.readingMinutes} min`}
+              label={t.practices.reading}
+              caption={t.dashboard.ofMinutes(fmt.number(totals.readingMinutes), fmt.number(target.readingMinutes))}
             />
             <Ring
               percent={completion.hearingMinutes}
-              label="Hearing"
-              caption={`${totals.hearingMinutes} of ${target.hearingMinutes} min`}
+              label={t.practices.hearing}
+              caption={t.dashboard.ofMinutes(fmt.number(totals.hearingMinutes), fmt.number(target.hearingMinutes))}
             />
           </div>
         </Card>
@@ -135,15 +141,16 @@ export function DashboardScreen() {
         <Link to="/week" className="block">
           <Card className="flex items-center justify-between gap-4">
             <div>
-              <p className={EYEBROW}>This week</p>
+              <p className={EYEBROW}>{t.dashboard.thisWeek}</p>
               <ul className="mt-3 flex gap-3">
                 {weekDates(today).map((date) => {
                   const future = date > today
                   const dayState = dayStatus(byDate.get(date))
+                  const weekday = fmt.weekdayShort(date)
                   return (
                     <li
                       key={date}
-                      aria-label={`${weekdayShort(date)}: ${future ? 'Upcoming' : STATUS_LABELS[dayState]}`}
+                      aria-label={`${weekday}: ${future ? t.status.upcoming : t.dayStatus[dayState]}`}
                       className="flex flex-col items-center gap-1.5 text-[10px] font-medium text-ink-muted"
                     >
                       <span
@@ -151,7 +158,7 @@ export function DashboardScreen() {
                           date === today ? 'ring-2 ring-saffron ring-offset-2 ring-offset-card' : ''
                         }`}
                       />
-                      {weekdayShort(date).charAt(0)}
+                      {weekday.charAt(0)}
                     </li>
                   )
                 })}

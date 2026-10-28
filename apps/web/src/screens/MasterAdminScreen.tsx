@@ -8,14 +8,17 @@ import { Card } from '../components/Card'
 import { FormAlert } from '../components/FormAlert'
 import { PageHeader } from '../components/PageHeader'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
-import { shortDate } from '../lib/format'
-import { ROLE_LABELS } from '../lib/roles'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { NewDevoteeForm } from './accounts/NewDevoteeForm'
 import { PasswordHandover, SMALL_BUTTON, SMALL_PRIMARY, type Handover } from './accounts/PasswordHandover'
 import { ResetRequests } from './accounts/ResetRequests'
+import { MasterAdminTabs } from './MasterAdminTabs'
 
 export function MasterAdminScreen() {
   const user = useUser()
+  const t = useT()
+  const fmt = useFormat()
   const isAdmin = hasCapability(user.role, 'ADMINISTER')
   const queryClient = useQueryClient()
   const accounts = useQuery(accountsQuery)
@@ -29,7 +32,7 @@ export function MasterAdminScreen() {
       await work()
       await refresh()
     } catch {
-      setFailure("That change didn't go through. Check your connection and try again.")
+      setFailure(t.masterAdmin.changeFailed)
     }
   }
   // Coordinators look after devotees; only administrators touch other coordinators and administrators.
@@ -37,7 +40,8 @@ export function MasterAdminScreen() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 py-6 md:py-10">
-      <PageHeader title="Master admin" subtitle="Create devotee accounts and hand over their first password in person." />
+      <PageHeader title={t.masterAdmin.title} subtitle={t.masterAdmin.subtitle} />
+      <MasterAdminTabs />
       <NewDevoteeForm canCreateLeaders={isAdmin} onCreated={refresh} />
       <ResetRequests />
       <FormAlert message={failure} />
@@ -52,11 +56,11 @@ export function MasterAdminScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-ink-muted">
-                <th className="px-4 py-3 font-semibold">Devotee</th>
-                <th className="px-3 py-3 font-semibold">Role</th>
-                <th className="px-3 py-3 font-semibold">Joined</th>
-                <th className="px-3 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                <th className="px-4 py-3 font-semibold">{t.masterAdmin.devotee}</th>
+                <th className="px-3 py-3 font-semibold">{t.masterAdmin.role}</th>
+                <th className="px-3 py-3 font-semibold">{t.masterAdmin.joined}</th>
+                <th className="px-3 py-3 font-semibold">{t.masterAdmin.status}</th>
+                <th className="px-4 py-3 text-right font-semibold">{t.masterAdmin.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -76,7 +80,7 @@ export function MasterAdminScreen() {
                   <td className="px-3 py-3">
                     {isAdmin ? (
                       <select
-                        aria-label={`Role of ${account.name}`}
+                        aria-label={t.masterAdmin.roleOf(account.name)}
                         value={account.role}
                         onChange={(event) =>
                           void act(async () => {
@@ -87,18 +91,18 @@ export function MasterAdminScreen() {
                       >
                         {RoleSchema.options.map((role) => (
                           <option key={role} value={role}>
-                            {ROLE_LABELS[role]}
+                            {t.roles[role]}
                           </option>
                         ))}
                       </select>
                     ) : (
-                      <span className="text-ink">{ROLE_LABELS[account.role]}</span>
+                      <span className="text-ink">{t.roles[account.role]}</span>
                     )}
                     {isAdmin && account.role === 'COORDINATOR' && (
                       <label className="mt-1.5 flex items-center gap-2 text-xs text-ink-muted">
                         <input
                           type="checkbox"
-                          aria-label={`Record review for ${account.name}`}
+                          aria-label={t.masterAdmin.recordReviewFor(account.name)}
                           checked={account.canReviewRecords}
                           onChange={(event) =>
                             void act(async () => {
@@ -107,14 +111,14 @@ export function MasterAdminScreen() {
                           }
                           className="accent-saffron"
                         />
-                        Record review
+                        {t.masterAdmin.recordReview}
                       </label>
                     )}
                   </td>
-                  <td className="px-3 py-3 text-ink-muted">{shortDate(account.joinedAt)}</td>
+                  <td className="px-3 py-3 text-ink-muted">{fmt.shortDate(account.joinedAt)}</td>
                   <td className="px-3 py-3">
                     <span className={account.active ? 'font-medium text-tulasi' : 'text-ink-muted'}>
-                      {account.active ? 'Active' : 'Inactive'}
+                      {account.active ? t.masterAdmin.active : t.masterAdmin.inactive}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -129,7 +133,7 @@ export function MasterAdminScreen() {
                           }
                           className={SMALL_BUTTON}
                         >
-                          {account.active ? 'Deactivate' : 'Reactivate'}
+                          {account.active ? t.masterAdmin.deactivate : t.masterAdmin.reactivate}
                         </button>
                       )}
                       {inCare(account) && (
@@ -142,7 +146,7 @@ export function MasterAdminScreen() {
                           }
                           className={SMALL_BUTTON}
                         >
-                          Issue one-time password
+                          {t.masterAdmin.issuePassword}
                         </button>
                       )}
                     </div>
@@ -159,6 +163,7 @@ export function MasterAdminScreen() {
 
 /** Names are the congregation's to keep: only administrators change them, and the ID always shows beside them. */
 function NameCell({ account, isAdmin, onRename }: { account: Account; isAdmin: boolean; onRename: (name: string) => Promise<void> }) {
+  const t = useT()
   const [draft, setDraft] = useState<string>()
   if (draft !== undefined) {
     return (
@@ -170,16 +175,16 @@ function NameCell({ account, isAdmin, onRename }: { account: Account; isAdmin: b
         className="flex flex-wrap items-center gap-2"
       >
         <input
-          aria-label="New name"
+          aria-label={t.masterAdmin.newName}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           className="rounded-lg border border-line bg-card px-2 py-1 text-sm text-ink"
         />
         <button type="submit" className={SMALL_PRIMARY}>
-          Save name
+          {t.masterAdmin.saveName}
         </button>
         <button type="button" onClick={() => setDraft(undefined)} className={SMALL_BUTTON}>
-          Cancel
+          {t.masterAdmin.cancel}
         </button>
       </form>
     )
@@ -189,7 +194,7 @@ function NameCell({ account, isAdmin, onRename }: { account: Account; isAdmin: b
       <span className="font-medium text-ink">{account.name}</span>
       {isAdmin && (
         <button type="button" onClick={() => setDraft(account.name)} className="ml-2 text-xs font-semibold text-saffron-text">
-          Rename
+          {t.masterAdmin.rename}
         </button>
       )}
       <span className="block text-xs text-ink-muted">{account.devoteeId}</span>

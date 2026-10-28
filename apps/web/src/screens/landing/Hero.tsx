@@ -1,7 +1,8 @@
 import { motion, useMotionValue, useScroll, useSpring, useTransform } from 'motion/react'
 import { useRef, type PointerEvent } from 'react'
 import { EYEBROW } from '../../components/styles'
-import { HERO_PORTRAIT, HERO_SLOKA } from '../../lib/landing'
+import { useT } from '../../i18n'
+import { HERO_PORTRAIT_SRC } from '../../lib/landing'
 import { rise, stagger, usePrefersReducedMotion } from '../../lib/motion'
 import { Ways } from './Ways'
 
@@ -54,6 +55,7 @@ function MalaRing({ reduced }: { reduced: boolean }) {
 }
 
 function Portrait() {
+  const t = useT()
   const reduced = usePrefersReducedMotion()
   const pointerX = useMotionValue(0)
   const pointerY = useMotionValue(0)
@@ -97,7 +99,7 @@ function Portrait() {
           </motion.div>
 
           <motion.figure
-            aria-label="Śrīla Prabhupāda"
+            aria-label={t.landing.prabhupadaName}
             initial={{ opacity: 0, scale: 0.86, filter: 'blur(10px)' }}
             animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
             transition={{ duration: 1.2, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -108,8 +110,8 @@ function Portrait() {
             <div className="relative h-full w-full rounded-full bg-gradient-to-br from-[#e87a00] via-[#f2b04a] to-[#d35400] p-[3px] shadow-[0_40px_90px_-35px_rgb(138_58_0/0.55)]">
               <div className="h-full w-full overflow-hidden rounded-full border-[3px] border-card bg-card">
                 <img
-                  src={HERO_PORTRAIT.src}
-                  alt={HERO_PORTRAIT.alt}
+                  src={HERO_PORTRAIT_SRC}
+                  alt={t.landing.portraitAlt}
                   className={`h-full w-full object-cover ${reduced ? '' : 'portrait-drift'}`}
                 />
               </div>
@@ -122,9 +124,9 @@ function Portrait() {
                 transition={{ delay: 1.3, duration: 0.6, ease: 'easeOut' }}
                 className="rounded-full border border-line bg-card px-4 py-1.5 text-center shadow-card"
               >
-                <span className="block font-serif text-[15px] leading-tight text-ink">Śrīla Prabhupāda</span>
+                <span className="block font-serif text-[15px] leading-tight text-ink">{t.landing.prabhupadaName}</span>
                 <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-saffron-text">
-                  Founder-ācārya of ISKCON
+                  {t.landing.prabhupadaTitle}
                 </span>
               </motion.figcaption>
             </div>
@@ -151,15 +153,15 @@ function Portrait() {
         className="absolute -left-4 bottom-0 max-w-xs rounded-2xl border border-line bg-card p-5 shadow-float md:-left-16"
       >
         <blockquote className="font-serif text-lg italic leading-snug text-ink">
-          {HERO_SLOKA.sanskrit.map((line) => (
+          {t.landing.heroSloka.sanskrit.map((line) => (
             <span key={line} className="block">
               {line}
             </span>
           ))}
         </blockquote>
-        <p className="mt-2 text-sm text-ink-muted">“{HERO_SLOKA.translation}”</p>
+        <p className="mt-2 text-sm text-ink-muted">“{t.landing.heroSloka.translation}”</p>
         <figcaption className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-saffron-text">
-          {HERO_SLOKA.source}
+          {t.landing.heroSloka.source}
         </figcaption>
       </motion.figure>
     </div>
@@ -167,6 +169,7 @@ function Portrait() {
 }
 
 export function Hero({ signedIn }: { signedIn: boolean }) {
+  const t = useT()
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
   const portraitY = useTransform(scrollYProgress, [0, 1], [0, 70])
@@ -182,20 +185,20 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-14 md:grid-cols-[1.1fr_1fr] md:pb-28 md:pt-24">
         <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
           <motion.p variants={rise} className={EYEBROW}>
-            Sharanagati ISKCON Congregation
+            {t.landing.eyebrow}
           </motion.p>
           <motion.h1 variants={rise} className="font-serif text-5xl leading-[1.04] text-ink md:text-6xl lg:text-7xl">
-            Keep your daily sadhana, <em className="text-saffron-text">with devotion.</em>
+            {t.landing.heading1}
+            <em className="text-saffron-text">{t.landing.heading2}</em>
           </motion.h1>
           <motion.p variants={rise} className="max-w-xl text-lg leading-relaxed text-ink-muted">
-            Japa, reading and hearing, recorded in under two minutes a day, measured against the vow you set, and shared
-            only as far as you choose.
+            {t.landing.description}
           </motion.p>
           <motion.div variants={rise}>
             <Ways signedIn={signedIn} />
           </motion.div>
           <motion.p variants={rise} className="text-sm text-ink-muted">
-            Free for the congregation · Works offline · Reflections stay private
+            {t.landing.features}
           </motion.p>
         </motion.div>
 

@@ -22,8 +22,11 @@ import {
 } from '@sadhana/domain'
 import { http, HttpResponse } from 'msw'
 import {
+  BookInputSchema,
   CONTACT_IN_USE,
   DevoteePatchSchema,
+  LectureInputSchema,
+  LIBRARY_DUPLICATE,
   NewDevoteeSchema,
   OtpRequestSchema,
   ProfileInputSchema,
@@ -32,7 +35,9 @@ import {
   VERIFICATION,
   type Account as AccountView,
   type AuditEvent,
+  type Book,
   type EntryRecord,
+  type Lecture,
   type MemberWeek,
   type PendingReset,
   type Profile,
@@ -42,7 +47,7 @@ import {
 import type { LoginInput } from '../auth/forms'
 import type { SessionUser } from '../auth/session'
 import { deviceTimeZone, todayLocalDate } from '../lib/clock'
-import { ACCOUNTS, AUDIT, generatedEntry, PERSONAL, RECOMMENDED, RESET_REQUESTS, type Account } from '@sadhana/fixtures'
+import { ACCOUNTS, AUDIT, BOOKS, generatedEntry, LECTURES, PERSONAL, RECOMMENDED, RESET_REQUESTS, type Account } from '@sadhana/fixtures'
 
 export { PASSWORD, TEMPORARY_PASSWORD } from '@sadhana/fixtures'
 
@@ -80,6 +85,9 @@ interface MockState {
   reminders: Map<string, Reminders>
   resetRequests: PendingReset[]
   audit: AuditEvent[]
+  books: Book[]
+  lectures: Lecture[]
+  nextLibraryId: number
   nextId: number
   /** Verification codes "texted" to numbers being claimed, keyed by E.164 number. */
   codes: Map<string, { code: string; attempts: number }>
@@ -111,6 +119,9 @@ const freshState = (): MockState => ({
   reminders: new Map([[devotee.devoteeId, { enabled: true, time: '21:00', timeZone: deviceTimeZone(), channel: 'IN_APP' }]]),
   resetRequests: [...RESET_REQUESTS],
   audit: [...AUDIT],
+  books: BOOKS.map((book) => ({ ...book, uses: 0 })),
+  lectures: LECTURES.map((lecture) => ({ ...lecture, uses: 0 })),
+  nextLibraryId: 100,
   nextId: 200,
   codes: new Map(),
   nextCode: 246810,
@@ -127,9 +138,48 @@ export function setMockSession(user: SessionUser | null) {
   persistSession()
 }
 
-export function seedEntry(devoteeId: string, entry: DailyEntry, updatedAt = `${entry.localDate}T16:30:00.000Z`) {
-  state.entries.set(`${devoteeId}|${entry.localDate}`, { ...entry, updatedAt })
+/** The record for an entry: its sessions with the names the library holds for their ids. */
+function describe(entry: DailyEntry): Omit<EntryRecord, 'updatedAt'> {
+  return {
+    ...entry,
+    reading: entry.reading.map((session) => ({
+      ...session,
+      bookTitle: state.books.find((book) => book.id === session.bookId)?.title ?? '',
+    })),
+    hearing: entry.hearing.map((session) => {
+      const lecture = state.lectures.find((candidate) => candidate.id === session.lectureId)
+      return { ...session, lectureTitle: lecture?.title ?? '', speaker: lecture?.speaker, source: lecture?.source }
+    }),
+  }
 }
+
+export function seedEntry(devoteeId: string, entry: DailyEntry, updatedAt = `${entry.localDate}T16:30:00.000Z`) {
+  state.entries.set(`${devoteeId}|${entry.localDate}`, { ...describe(entry), updatedAt })
+}
+
+/** How many saved sessions point at a library item (the generated history is not counted). */
+const uses = (kind: 'book' | 'lecture', id: number) =>
+  [...state.entries.values()].reduce(
+    (sum, entry) =>
+      sum +
+      (kind === 'book'
+        ? entry.reading.filter((session) => session.bookId === id).length
+        : entry.hearing.filter((session) => session.lectureId === id).length),
+    0,
+  )
+
+const sameText = (a: string | undefined, b: string | undefined) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase()
+
+const libraryIssues = (entry: DailyEntry) => [
+  ...entry.reading.flatMap((session, index) =>
+    state.books.some((book) => book.id === session.bookId) ? [] : [{ path: ['reading', index, 'bookId'], message: 'Choose a book from the library' }],
+  ),
+  ...entry.hearing.flatMap((session, index) =>
+    state.lectures.some((lecture) => lecture.id === session.lectureId)
+      ? []
+      : [{ path: ['hearing', index, 'lectureId'], message: 'Choose a lecture from the library' }],
+  ),
+]
 
 /** The code the mock last "texted", for tests and for trying the flow against the mocks. */
 export const lastVerificationCode = (): string | undefined => state.lastCode
@@ -191,7 +241,7 @@ function entryRecord(devoteeId: string, localDate: LocalDate): EntryRecord | und
   if (saved) return saved
   if (localDate >= todayLocalDate()) return undefined
   const generated = generatedEntry(devoteeId, localDate)
-  return generated && { ...generated, updatedAt: `${localDate}T16:30:00.000Z` }
+  return generated && { ...describe(generated), updatedAt: `${localDate}T16:30:00.000Z` }
 }
 
 function entriesBetween(devoteeId: string, from: LocalDate, to: LocalDate): EntryRecord[] {
@@ -404,10 +454,12 @@ export const handlers = [
     const parsed = PutEntrySchema.safeParse(await request.json())
     if (!parsed.success || parsed.data.localDate !== params['localDate']) return status(400)
     if (!isEditable(parsed.data.localDate, todayLocalDate())) return status(422)
+    const issues = libraryIssues(parsed.data)
+    if (issues.length) return HttpResponse.json({ issues }, { status: 400 })
     const current = entryRecord(user.devoteeId, parsed.data.localDate)
     if (current?.updatedAt !== parsed.data.baseUpdatedAt) return HttpResponse.json({ entry: current }, { status: 409 })
     const { clientUpdatedAt, baseUpdatedAt, ...entry } = parsed.data
-    const record: EntryRecord = { ...entry, updatedAt: new Date().toISOString() }
+    const record: EntryRecord = { ...describe(entry), updatedAt: new Date().toISOString() }
     state.entries.set(`${user.devoteeId}|${record.localDate}`, record)
     if (key) state.seen.set(key, record)
     return HttpResponse.json({ entry: record })
@@ -581,5 +633,94 @@ export const handlers = [
     const user = guard('ADMINISTER')
     if (user instanceof Response) return user
     return HttpResponse.json({ events: state.audit })
+  }),
+
+  http.get('/api/library', () => {
+    const user = guard()
+    if (user instanceof Response) return user
+    return HttpResponse.json({
+      library: {
+        books: state.books.map((book) => ({ ...book, uses: uses('book', book.id) })),
+        lectures: state.lectures.map((lecture) => ({ ...lecture, uses: uses('lecture', lecture.id) })),
+      },
+    })
+  }),
+
+  http.post('/api/library/books', async ({ request }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const parsed = BookInputSchema.safeParse(await request.json())
+    if (!parsed.success) return status(400)
+    if (state.books.some((book) => sameText(book.title, parsed.data.title))) {
+      return conflict([{ path: ['title'], message: LIBRARY_DUPLICATE.book }])
+    }
+    const book: Book = { id: state.nextLibraryId++, title: parsed.data.title, uses: 0 }
+    state.books.push(book)
+    return HttpResponse.json({ book }, { status: 201 })
+  }),
+
+  http.put('/api/library/books/:id', async ({ request, params }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const book = state.books.find((candidate) => candidate.id === Number(params['id']))
+    const parsed = BookInputSchema.safeParse(await request.json())
+    if (!book || !parsed.success) return status(404)
+    if (state.books.some((other) => other.id !== book.id && sameText(other.title, parsed.data.title))) {
+      return conflict([{ path: ['title'], message: LIBRARY_DUPLICATE.book }])
+    }
+    book.title = parsed.data.title
+    return HttpResponse.json({ book: { ...book, uses: uses('book', book.id) } })
+  }),
+
+  http.delete('/api/library/books/:id', ({ params }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const id = Number(params['id'])
+    if (!state.books.some((book) => book.id === id)) return status(404)
+    const count = uses('book', id)
+    if (count > 0) return HttpResponse.json({ reason: 'IN_USE', uses: count }, { status: 409 })
+    state.books = state.books.filter((book) => book.id !== id)
+    return status(204)
+  }),
+
+  http.post('/api/library/lectures', async ({ request }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const parsed = LectureInputSchema.safeParse(await request.json())
+    if (!parsed.success) return status(400)
+    if (state.lectures.some((lecture) => sameText(lecture.title, parsed.data.title) && sameText(lecture.speaker, parsed.data.speaker))) {
+      return conflict([{ path: ['title'], message: LIBRARY_DUPLICATE.lecture }])
+    }
+    const lecture: Lecture = { id: state.nextLibraryId++, ...parsed.data, uses: 0 }
+    state.lectures.push(lecture)
+    return HttpResponse.json({ lecture }, { status: 201 })
+  }),
+
+  http.put('/api/library/lectures/:id', async ({ request, params }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const lecture = state.lectures.find((candidate) => candidate.id === Number(params['id']))
+    const parsed = LectureInputSchema.safeParse(await request.json())
+    if (!lecture || !parsed.success) return status(404)
+    if (
+      state.lectures.some(
+        (other) => other.id !== lecture.id && sameText(other.title, parsed.data.title) && sameText(other.speaker, parsed.data.speaker),
+      )
+    ) {
+      return conflict([{ path: ['title'], message: LIBRARY_DUPLICATE.lecture }])
+    }
+    Object.assign(lecture, { title: parsed.data.title, speaker: parsed.data.speaker, source: parsed.data.source })
+    return HttpResponse.json({ lecture: { ...lecture, uses: uses('lecture', lecture.id) } })
+  }),
+
+  http.delete('/api/library/lectures/:id', ({ params }) => {
+    const user = guard('MANAGE_ACCOUNTS')
+    if (user instanceof Response) return user
+    const id = Number(params['id'])
+    if (!state.lectures.some((lecture) => lecture.id === id)) return status(404)
+    const count = uses('lecture', id)
+    if (count > 0) return HttpResponse.json({ reason: 'IN_USE', uses: count }, { status: 409 })
+    state.lectures = state.lectures.filter((lecture) => lecture.id !== id)
+    return status(204)
   }),
 ]

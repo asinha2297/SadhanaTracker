@@ -9,12 +9,15 @@ import { Card } from '../components/Card'
 import { PageHeader } from '../components/PageHeader'
 import { Ring } from '../components/Ring'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
-import { STATUS_DOT, STATUS_LABELS } from '../components/StatusBadge'
+import { STATUS_DOT } from '../components/StatusBadge'
 import { EYEBROW, ICON_BUTTON } from '../components/styles'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { minutesLabel, weekLabel, weekdayShort } from '../lib/format'
 
 export function ReportScreen() {
+  const t = useT()
+  const fmt = useFormat()
   const today = todayLocalDate()
   const thisWeek = weekRangeOf(today).start
   const [weekStart, setWeekStart] = useState<LocalDate>(thisWeek)
@@ -22,15 +25,15 @@ export function ReportScreen() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 py-6 md:py-10">
-      <PageHeader title="Report" subtitle="Participation across the congregation, week by week." />
-      <nav aria-label="Week" className="flex items-center justify-between gap-3">
-        <button type="button" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))} className={ICON_BUTTON}>
+      <PageHeader title={t.report.title} subtitle={t.report.subtitle} />
+      <nav aria-label={t.report.weekNav} className="flex items-center justify-between gap-3">
+        <button type="button" aria-label={t.report.previousWeek} onClick={() => setWeekStart(addDays(weekStart, -7))} className={ICON_BUTTON}>
           <ChevronLeft className="size-5" aria-hidden />
         </button>
-        <h2 className="font-serif text-2xl text-ink">{weekLabel(weekStart, addDays(weekStart, 6))}</h2>
+        <h2 className="font-serif text-2xl text-ink">{fmt.weekLabel(weekStart, addDays(weekStart, 6))}</h2>
         <button
           type="button"
-          aria-label="Next week"
+          aria-label={t.report.nextWeek}
           disabled={weekStart === thisWeek}
           onClick={() => setWeekStart(addDays(weekStart, 7))}
           className={ICON_BUTTON}
@@ -62,36 +65,36 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
 }
 
 function ReportBody({ report }: { report: Report }) {
+  const t = useT()
+  const fmt = useFormat()
   const { summary } = report
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Devotees" value={summary.members} />
-        <Stat label="Active this week" value={summary.active} hint="recorded at least one day" />
-        <Stat label="Fully recorded" value={summary.fullyRecorded} hint="no missing days" />
+        <Stat label={t.report.devotees} value={summary.members} />
+        <Stat label={t.report.activeThisWeek} value={summary.active} hint={t.report.activeHint} />
+        <Stat label={t.report.fullyRecorded} value={summary.fullyRecorded} hint={t.report.fullyHint} />
       </div>
       <Card>
-        <p className={EYEBROW}>Average completion</p>
+        <p className={EYEBROW}>{t.report.averageCompletion}</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <Ring percent={summary.averageCompletion.rounds} label="Japa" caption={`${summary.totals.rounds} rounds in total`} />
+          <Ring percent={summary.averageCompletion.rounds} label={t.practices.japa} caption={t.report.roundsTotal(fmt.number(summary.totals.rounds))} />
           <Ring
             percent={summary.averageCompletion.readingMinutes}
-            label="Reading"
-            caption={`${minutesLabel(summary.totals.readingMinutes)} in total`}
+            label={t.practices.reading}
+            caption={t.report.minutesTotal(fmt.minutes(summary.totals.readingMinutes))}
           />
           <Ring
             percent={summary.averageCompletion.hearingMinutes}
-            label="Hearing"
-            caption={`${minutesLabel(summary.totals.hearingMinutes)} in total`}
+            label={t.practices.hearing}
+            caption={t.report.minutesTotal(fmt.minutes(summary.totals.hearingMinutes))}
           />
         </div>
       </Card>
       {report.members ? (
         <MemberTable members={report.members} weekStart={report.week.start} />
       ) : (
-        <Card className="text-sm text-ink-muted">
-          Individual records aren't enabled for you. An administrator can grant you record review.
-        </Card>
+        <Card className="text-sm text-ink-muted">{t.report.noIndividual}</Card>
       )}
     </>
   )
@@ -101,22 +104,24 @@ const average = (member: MemberWeek) =>
   Math.round((member.completion.rounds + member.completion.readingMinutes + member.completion.hearingMinutes) / 3)
 
 function MemberTable({ members, weekStart }: { members: MemberWeek[]; weekStart: LocalDate }) {
+  const t = useT()
+  const fmt = useFormat()
   const dates = weekDates(weekStart)
   return (
     <Card className="overflow-x-auto p-0">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-ink-muted">
-            <th className="px-4 py-3 font-semibold">Devotee</th>
+            <th className="px-4 py-3 font-semibold">{t.report.devotee}</th>
             {dates.map((date) => (
               <th key={date} className="px-1 py-3 text-center font-semibold">
-                {weekdayShort(date).charAt(0)}
+                {fmt.weekdayShort(date).charAt(0)}
               </th>
             ))}
-            <th className="px-3 py-3 text-right font-semibold">Rounds</th>
-            <th className="px-3 py-3 text-right font-semibold">Reading</th>
-            <th className="px-3 py-3 text-right font-semibold">Hearing</th>
-            <th className="px-4 py-3 text-right font-semibold">Completion</th>
+            <th className="px-3 py-3 text-right font-semibold">{t.report.rounds}</th>
+            <th className="px-3 py-3 text-right font-semibold">{t.report.reading}</th>
+            <th className="px-3 py-3 text-right font-semibold">{t.report.hearing}</th>
+            <th className="px-4 py-3 text-right font-semibold">{t.report.completion}</th>
           </tr>
         </thead>
         <tbody>
@@ -129,13 +134,13 @@ function MemberTable({ members, weekStart }: { members: MemberWeek[]; weekStart:
               {member.days.map((status, index) => (
                 <td key={dates[index]} className="px-1 py-3 text-center">
                   <span className={`inline-block size-2.5 rounded-full ${STATUS_DOT[status]}`} />
-                  <span className="sr-only">{STATUS_LABELS[status]}</span>
+                  <span className="sr-only">{t.dayStatus[status]}</span>
                 </td>
               ))}
-              <td className="px-3 py-3 text-right tabular-nums text-ink">{member.totals.rounds}</td>
-              <td className="px-3 py-3 text-right tabular-nums text-ink">{minutesLabel(member.totals.readingMinutes)}</td>
-              <td className="px-3 py-3 text-right tabular-nums text-ink">{minutesLabel(member.totals.hearingMinutes)}</td>
-              <td className="px-4 py-3 text-right tabular-nums font-medium text-ink">{average(member)}%</td>
+              <td className="px-3 py-3 text-right tabular-nums text-ink">{fmt.number(member.totals.rounds)}</td>
+              <td className="px-3 py-3 text-right tabular-nums text-ink">{fmt.minutes(member.totals.readingMinutes)}</td>
+              <td className="px-3 py-3 text-right tabular-nums text-ink">{fmt.minutes(member.totals.hearingMinutes)}</td>
+              <td className="px-4 py-3 text-right tabular-nums font-medium text-ink">{fmt.percent(average(member))}</td>
             </tr>
           ))}
         </tbody>

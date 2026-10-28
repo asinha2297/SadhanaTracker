@@ -18,7 +18,7 @@ afterAll(() => ctx.close())
 const entry = (localDate: string, rounds: number, baseUpdatedAt?: string) => ({
   localDate,
   rounds,
-  reading: [{ bookTitle: 'Śrīmad-Bhāgavatam', minutes: 30 }],
+  reading: [{ bookId: 2, minutes: 30 }],
   hearing: [],
   clientUpdatedAt: new Date().toISOString(),
   baseUpdatedAt,
@@ -47,7 +47,11 @@ describe('entries', () => {
 
   it('saves today and replays the same Idempotency-Key instead of saving twice', async () => {
     const first = await put(today, entry(today, 16), 'key-1').expect(200)
-    expect(first.body.entry).toMatchObject({ localDate: today, rounds: 16, reading: [{ bookTitle: 'Śrīmad-Bhāgavatam', minutes: 30 }] })
+    expect(first.body.entry).toMatchObject({
+      localDate: today,
+      rounds: 16,
+      reading: [{ bookId: 2, bookTitle: 'Śrīmad-Bhāgavatam', minutes: 30 }],
+    })
     const replay = await put(today, entry(today, 8), 'key-1').expect(200)
     expect(replay.body.entry).toEqual(first.body.entry)
     const { body } = await range(today, today).expect(200)
@@ -69,6 +73,19 @@ describe('entries', () => {
     await put('2026-13-40', entry('2026-13-40', 4), 'key-7').expect(400)
     await put(today, entry(yesterday, 4), 'key-8').expect(400)
     await put(today, { ...entry(today, -1), rounds: -1 }, 'key-9').expect(400)
+  })
+
+  it('names the lecture and speaker behind a hearing session and refuses ids the library does not hold', async () => {
+    const current = (await range(today, today).expect(200)).body.entries[0]
+    const saved = await put(
+      today,
+      { ...entry(today, 8, current?.updatedAt), reading: [], hearing: [{ lectureId: 4, minutes: 25 }] },
+      'key-10',
+    ).expect(200)
+    expect(saved.body.entry.hearing).toEqual([{ lectureId: 4, lectureTitle: 'Japa workshop', speaker: 'Govinda Dāsa', source: 'Temple', minutes: 25 }])
+    const unknown = await put(today, { ...entry(today, 8, saved.body.entry.updatedAt), reading: [{ bookId: 999, minutes: 5 }] }, 'key-11').expect(400)
+    expect(unknown.body.issues).toEqual([{ path: ['reading', 0, 'bookId'], message: 'Choose a book from the library' }])
+    await put(today, { ...entry(today, 8, saved.body.entry.updatedAt), reading: [{ bookTitle: 'Typed by hand', minutes: 5 }] }, 'key-12').expect(400)
   })
 
   it('never shows one devotee another devotee’s record', async () => {

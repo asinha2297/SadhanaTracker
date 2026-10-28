@@ -1,9 +1,8 @@
+import type { EntryRecord } from '@sadhana/contract'
 import { addDays, dailyTotals, dayStatus, sumTotals, type LocalDate, type Target } from '@sadhana/domain'
 import ExcelJS from 'exceljs'
 import type { Db } from '../db/client'
-import type { EntryRow } from '../db/schema'
 import { activeAccounts } from './accounts'
-import { toRecord } from './entries'
 import { entriesFor } from './reports'
 
 type Cell = string | number
@@ -24,31 +23,23 @@ export async function exportTable(db: Db, from: LocalDate, to: LocalDate, indivi
     from,
     to,
   )
-  const record = (devoteeId: string, date: LocalDate): EntryRow | undefined => records.get(`${devoteeId}|${date}`)
+  const record = (devoteeId: string, date: LocalDate): EntryRecord | undefined => records.get(`${devoteeId}|${date}`)
   const rows: Cell[][] = []
 
   if (individual) {
     for (const member of members) {
       for (let date = from; date <= to; date = addDays(date, 1)) {
         const row = record(member.devoteeId, date)
-        const totals = row ? dailyTotals(toRecord(row)) : ZERO
-        rows.push([
-          member.devoteeId,
-          member.name,
-          date,
-          dayStatus(row && toRecord(row)),
-          totals.rounds,
-          totals.readingMinutes,
-          totals.hearingMinutes,
-        ])
+        const totals = row ? dailyTotals(row) : ZERO
+        rows.push([member.devoteeId, member.name, date, dayStatus(row), totals.rounds, totals.readingMinutes, totals.hearingMinutes])
       }
     }
     return { header: ['devoteeId', 'name', 'date', 'status', 'rounds', 'readingMinutes', 'hearingMinutes'], rows }
   }
 
   for (let date = from; date <= to; date = addDays(date, 1)) {
-    const present = members.map((member) => record(member.devoteeId, date)).filter((row): row is EntryRow => row !== undefined)
-    const totals = sumTotals(present.map(toRecord))
+    const present = members.map((member) => record(member.devoteeId, date)).filter((row): row is EntryRecord => row !== undefined)
+    const totals = sumTotals(present)
     rows.push([date, members.length, present.length, totals.rounds, totals.readingMinutes, totals.hearingMinutes])
   }
   return { header: ['date', 'members', 'recorded', 'rounds', 'readingMinutes', 'hearingMinutes'], rows }

@@ -16,34 +16,35 @@ describe('RoleSchema', () => {
 })
 
 describe('ReadingSessionSchema', () => {
-  it('requires a book title and a positive whole number of minutes', () => {
-    expect(ReadingSessionSchema.safeParse({ bookTitle: 'Bhagavad-gītā As It Is', minutes: 30 }).success).toBe(true)
-    expect(ReadingSessionSchema.safeParse({ bookTitle: '   ', minutes: 30 }).success).toBe(false)
+  it('requires a book from the library and a positive whole number of minutes', () => {
+    expect(ReadingSessionSchema.safeParse({ bookId: 3, minutes: 30 }).success).toBe(true)
+    for (const bookId of [undefined, Number.NaN, 0, -1, 1.5, 'Bhagavad-gītā As It Is']) {
+      const result = ReadingSessionSchema.safeParse({ bookId, minutes: 30 })
+      expect(result.success).toBe(false)
+      expect(result.error?.issues[0]?.message).toBe('Choose a book from the library')
+    }
     for (const minutes of [0, -5, 1.5]) {
-      expect(ReadingSessionSchema.safeParse({ bookTitle: 'Bhagavad-gītā As It Is', minutes }).success).toBe(false)
+      expect(ReadingSessionSchema.safeParse({ bookId: 3, minutes }).success).toBe(false)
     }
   })
 
-  it('trims text and drops a blank chapter', () => {
-    expect(
-      ReadingSessionSchema.parse({ bookTitle: ' Śrīmad-Bhāgavatam ', chapterOrSection: '  ', minutes: 20 }),
-    ).toEqual({ bookTitle: 'Śrīmad-Bhāgavatam', minutes: 20 })
+  it('trims the chapter and drops it when blank', () => {
+    expect(ReadingSessionSchema.parse({ bookId: 2, chapterOrSection: ' Canto 1 ', minutes: 20 })).toEqual({
+      bookId: 2,
+      chapterOrSection: 'Canto 1',
+      minutes: 20,
+    })
+    expect(ReadingSessionSchema.parse({ bookId: 2, chapterOrSection: '  ', minutes: 20 })).toEqual({ bookId: 2, minutes: 20 })
   })
 })
 
 describe('HearingSessionSchema', () => {
-  it('requires a lecture title and positive minutes; speaker and source are optional', () => {
-    expect(HearingSessionSchema.safeParse({ lectureTitle: 'Bhagavad-gītā 2.13', minutes: 45 }).success).toBe(true)
-    expect(
-      HearingSessionSchema.safeParse({
-        lectureTitle: 'Bhagavad-gītā 2.13',
-        speaker: 'Śrīla Prabhupāda',
-        source: 'Vanipedia',
-        minutes: 45,
-      }).success,
-    ).toBe(true)
-    expect(HearingSessionSchema.safeParse({ lectureTitle: '', minutes: 45 }).success).toBe(false)
-    expect(HearingSessionSchema.safeParse({ lectureTitle: 'Bhagavad-gītā 2.13', minutes: 0 }).success).toBe(false)
+  it('requires a lecture from the library and positive minutes', () => {
+    expect(HearingSessionSchema.safeParse({ lectureId: 1, minutes: 45 }).success).toBe(true)
+    const missing = HearingSessionSchema.safeParse({ minutes: 45 })
+    expect(missing.success).toBe(false)
+    expect(missing.error?.issues[0]?.message).toBe('Choose a lecture from the library')
+    expect(HearingSessionSchema.safeParse({ lectureId: 1, minutes: 0 }).success).toBe(false)
   })
 })
 
@@ -67,12 +68,12 @@ describe('DailyEntrySchema', () => {
     const parsed = DailyEntrySchema.parse({
       ...base,
       reading: [
-        { bookTitle: 'Bhagavad-gītā As It Is', chapterOrSection: '2.47', minutes: 15 },
-        { bookTitle: 'Śrīmad-Bhāgavatam', minutes: 20 },
+        { bookId: 1, chapterOrSection: '2.47', minutes: 15 },
+        { bookId: 2, minutes: 20 },
       ],
-      hearing: [{ lectureTitle: 'Morning class', minutes: 40 }],
+      hearing: [{ lectureId: 4, minutes: 40 }],
     })
-    expect(parsed.reading.map((s) => s.bookTitle)).toEqual(['Bhagavad-gītā As It Is', 'Śrīmad-Bhāgavatam'])
+    expect(parsed.reading.map((s) => s.bookId)).toEqual([1, 2])
     expect(parsed.hearing).toHaveLength(1)
   })
 
@@ -113,16 +114,16 @@ describe('upper bounds', () => {
     expect(DailyEntrySchema.safeParse({ ...day, rounds: 200 }).success).toBe(true)
     expect(DailyEntrySchema.safeParse({ ...day, rounds: 201 }).success).toBe(false)
     expect(DailyEntrySchema.safeParse({ ...day, rounds: 3_000_000_000 }).success).toBe(false)
-    expect(ReadingSessionSchema.safeParse({ bookTitle: 'Śrī Īśopaniṣad', minutes: 1440 }).success).toBe(true)
-    expect(ReadingSessionSchema.safeParse({ bookTitle: 'Śrī Īśopaniṣad', minutes: 1441 }).success).toBe(false)
+    expect(ReadingSessionSchema.safeParse({ bookId: 6, minutes: 1440 }).success).toBe(true)
+    expect(ReadingSessionSchema.safeParse({ bookId: 6, minutes: 1441 }).success).toBe(false)
     expect(TargetSchema.safeParse({ rounds: 201, readingMinutes: 30, hearingMinutes: 30 }).success).toBe(false)
     expect(TargetSchema.safeParse({ rounds: 16, readingMinutes: 1441, hearingMinutes: 30 }).success).toBe(false)
   })
 
   it('refuses more sessions or longer text than a day needs', () => {
-    const session = { bookTitle: 'Śrī Īśopaniṣad', minutes: 5 }
+    const session = { bookId: 6, minutes: 5 }
     expect(DailyEntrySchema.safeParse({ ...day, rounds: 16, reading: Array.from({ length: 21 }, () => session) }).success).toBe(false)
     expect(DailyEntrySchema.safeParse({ ...day, rounds: 16, reflection: 'x'.repeat(4001) }).success).toBe(false)
-    expect(ReadingSessionSchema.safeParse({ ...session, bookTitle: 'x'.repeat(201) }).success).toBe(false)
+    expect(ReadingSessionSchema.safeParse({ ...session, chapterOrSection: 'x'.repeat(201) }).success).toBe(false)
   })
 })

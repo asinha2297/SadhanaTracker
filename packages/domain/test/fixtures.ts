@@ -16,7 +16,7 @@ export function entry(
     localDate,
     rounds,
     reflection,
-    reading: reading.map((minutes) => ({ bookTitle: 'Śrīmad-Bhāgavatam', minutes })),
-    hearing: hearing.map((minutes) => ({ lectureTitle: 'Bhagavad-gītā class', minutes })),
+    reading: reading.map((minutes) => ({ bookId: 2, minutes })),
+    hearing: hearing.map((minutes) => ({ lectureId: 1, minutes })),
   }
 }

@@ -10,10 +10,12 @@ import { AuthCard } from '../components/AuthCard'
 import { Button } from '../components/Button'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { useT } from '../i18n'
 
 export function SetPasswordScreen() {
   const { setUser } = useAuth()
   const user = useUser()
+  const t = useT()
   const [failure, setFailure] = useState<string>()
   const {
     register,
@@ -30,21 +32,18 @@ export function SetPasswordScreen() {
       setUser(await setPassword(currentPassword, newPassword))
     } catch (error) {
       if (!applyFieldIssues(error, (field, message) => setError(field as 'currentPassword', { message }))) {
-        setFailure("We couldn't save your password. Check your connection and try again.")
+        setFailure(t.auth.savePasswordFailed)
       }
     }
   })
 
   return (
-    <AuthCard
-      title="Choose your own password"
-      subtitle={`Haribol, ${user.name}. You signed in with a one-time password. Pick one only you know, at least 8 characters long.`}
-    >
+    <AuthCard title={t.auth.choosePassword} subtitle={t.auth.choosePasswordSubtitle(user.name)}>
       <form onSubmit={submit} noValidate className="space-y-5">
         <FormAlert message={failure} />
         <TextField
           id="currentPassword"
-          label="One-time password"
+          label={t.auth.oneTimePassword}
           type="password"
           autoComplete="current-password"
           error={errors.currentPassword?.message}
@@ -52,7 +51,7 @@ export function SetPasswordScreen() {
         />
         <TextField
           id="newPassword"
-          label="New password"
+          label={t.auth.newPassword}
           type="password"
           autoComplete="new-password"
           error={errors.newPassword?.message}
@@ -60,14 +59,14 @@ export function SetPasswordScreen() {
         />
         <TextField
           id="confirm"
-          label="Confirm password"
+          label={t.auth.confirmPassword}
           type="password"
           autoComplete="new-password"
           error={errors.confirm?.message}
           {...register('confirm')}
         />
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : 'Save password'}
+          {isSubmitting ? t.auth.saving : t.auth.savePassword}
         </Button>
       </form>
     </AuthCard>

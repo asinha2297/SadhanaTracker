@@ -24,8 +24,9 @@ import { Ring } from '../components/Ring'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
 import { StatusBadge } from '../components/StatusBadge'
 import { EYEBROW, ICON_BUTTON } from '../components/styles'
+import { useT } from '../i18n'
+import { useFormat } from '../i18n/format'
 import { todayLocalDate } from '../lib/clock'
-import { longDate, shortDate, totalsLine, weekLabel, weekdayShort } from '../lib/format'
 import { rise, stagger } from '../lib/motion'
 import { useEntries } from '../sync/useEntries'
 
@@ -45,6 +46,8 @@ export function WeekScreen() {
 }
 
 function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
+  const t = useT()
+  const fmt = useFormat()
   const dates = weekDates(range.start)
   const { query, entries, pendingDates } = useEntries(range.start, range.end)
   const targets = useQuery(targetsQuery)
@@ -72,18 +75,18 @@ function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="mx-auto max-w-3xl space-y-5 py-6 md:py-10">
-      <motion.nav variants={rise} aria-label="Week" className="flex items-center justify-between gap-3">
-        <Link to={`/week/${addDays(range.start, -7)}`} aria-label="Previous week" className={ICON_BUTTON}>
+      <motion.nav variants={rise} aria-label={t.week.weekNav} className="flex items-center justify-between gap-3">
+        <Link to={`/week/${addDays(range.start, -7)}`} aria-label={t.week.previous} className={ICON_BUTTON}>
           <ChevronLeft className="size-5" aria-hidden />
         </Link>
         <div className="text-center">
-          <p className={EYEBROW}>{currentWeek ? 'This week' : 'Week'}</p>
-          <h1 className="font-serif text-2xl text-ink md:text-3xl">{weekLabel(range.start, range.end)}</h1>
+          <p className={EYEBROW}>{currentWeek ? t.week.thisWeek : t.week.week}</p>
+          <h1 className="font-serif text-2xl text-ink md:text-3xl">{fmt.weekLabel(range.start, range.end)}</h1>
         </div>
         {currentWeek ? (
           <span className="size-9" aria-hidden />
         ) : (
-          <Link to={`/week/${addDays(range.start, 7)}`} aria-label="Next week" className={ICON_BUTTON}>
+          <Link to={`/week/${addDays(range.start, 7)}`} aria-label={t.week.next} className={ICON_BUTTON}>
             <ChevronRight className="size-5" aria-hidden />
           </Link>
         )}
@@ -92,23 +95,27 @@ function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
       <motion.div variants={rise}>
         <Card>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className={EYEBROW}>Against your targets</p>
+            <p className={EYEBROW}>{t.week.againstTargets}</p>
             <p className="text-sm text-ink-muted">
-              {recorded} of {elapsed.length} days recorded
-              {currentWeek && <span> · through today</span>}
+              {t.week.recordedOf(fmt.number(recorded), fmt.number(elapsed.length))}
+              {currentWeek && <span>{t.week.throughToday}</span>}
             </p>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <Ring percent={completion.rounds} label="Japa" caption={`${totals.rounds} of ${target.rounds} rounds`} />
+            <Ring
+              percent={completion.rounds}
+              label={t.practices.japa}
+              caption={t.dashboard.ofRounds(fmt.number(totals.rounds), fmt.number(target.rounds))}
+            />
             <Ring
               percent={completion.readingMinutes}
-              label="Reading"
-              caption={`${totals.readingMinutes} of ${target.readingMinutes} min`}
+              label={t.practices.reading}
+              caption={t.dashboard.ofMinutes(fmt.number(totals.readingMinutes), fmt.number(target.readingMinutes))}
             />
             <Ring
               percent={completion.hearingMinutes}
-              label="Hearing"
-              caption={`${totals.hearingMinutes} of ${target.hearingMinutes} min`}
+              label={t.practices.hearing}
+              caption={t.dashboard.ofMinutes(fmt.number(totals.hearingMinutes), fmt.number(target.hearingMinutes))}
             />
           </div>
         </Card>
@@ -121,28 +128,25 @@ function WeekReport({ range, today }: { range: WeekRange; today: LocalDate }) {
           const dayTarget = resolveTarget(targets.data, date)
           return (
             <li key={date}>
-              <Link to={`/entry/${date}`} aria-label={longDate(date)} className="block h-full">
+              <Link to={`/entry/${date}`} aria-label={fmt.longDate(date)} className="block h-full">
                 <Card
                   className={`h-full transition-colors hover:border-peacock/40 ${date === today ? 'border-saffron/50' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-ink">
-                      {weekdayShort(date)} <span className="font-normal text-ink-muted">{shortDate(date)}</span>
+                      {fmt.weekdayShort(date)} <span className="font-normal text-ink-muted">{fmt.shortDate(date)}</span>
                     </p>
                     {future ? (
-                      <span className="text-xs text-ink-muted">Upcoming</span>
+                      <span className="text-xs text-ink-muted">{t.status.upcoming}</span>
                     ) : (
-                      <StatusBadge
-                        status={dayStatus(entry)}
-                        label={date === today && !entry ? 'Not yet recorded' : undefined}
-                      />
+                      <StatusBadge status={dayStatus(entry)} label={date === today && !entry ? t.status.notYetRecorded : undefined} />
                     )}
                   </div>
-                  {entry && !future && <p className="mt-2 text-sm text-ink-muted">{totalsLine(dailyTotals(entry))}</p>}
+                  {entry && !future && <p className="mt-2 text-sm text-ink-muted">{fmt.totals(dailyTotals(entry))}</p>}
                   {entry && !future && dayTarget && meetsTarget(dailyTotals(entry), dayTarget) && (
-                    <p className="mt-1 text-xs font-semibold text-tulasi">Target met</p>
+                    <p className="mt-1 text-xs font-semibold text-tulasi">{t.status.targetMet}</p>
                   )}
-                  {pendingDates.has(date) && <p className="mt-1 text-xs font-medium text-saffron-text">Pending sync</p>}
+                  {pendingDates.has(date) && <p className="mt-1 text-xs font-medium text-saffron-text">{t.status.pendingSync}</p>}
                 </Card>
               </Link>
             </li>

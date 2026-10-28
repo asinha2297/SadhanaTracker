@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router'
 import type { SessionUser } from '../auth/session'
+import { LanguageToggle } from '../components/LanguageToggle'
 import { SignOutButton } from '../components/SignOutButton'
 import { SyncBadge } from '../components/SyncBadge'
 import { Wordmark } from '../components/Wordmark'
-import { ROLE_LABELS } from '../lib/roles'
+import { useT } from '../i18n'
 import type { NavItem, NavSection } from './navigation'
 
 const groupBySection = (items: NavItem[]) =>
@@ -13,17 +14,18 @@ const groupBySection = (items: NavItem[]) =>
   }, new Map<NavSection, NavItem[]>())
 
 export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }) {
+  const t = useT()
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line bg-card/60 px-4 py-7 backdrop-blur-2xl md:flex">
       <div className="px-3">
         <Wordmark tagline={false} />
       </div>
-      <nav aria-label="Main navigation" className="mt-9 flex-1 space-y-7 overflow-y-auto">
+      <nav aria-label={t.nav.main} className="mt-9 flex-1 space-y-7 overflow-y-auto">
         {[...groupBySection(items)].map(([section, sectionItems]) => (
           <div key={section}>
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">{section}</p>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">{t.nav.sections[section]}</p>
             <ul className="mt-2 space-y-0.5">
-              {sectionItems.map(({ to, label, icon: Icon }) => (
+              {sectionItems.map(({ to, key, icon: Icon }) => (
                 <li key={to}>
                   <NavLink
                     to={to}
@@ -35,7 +37,7 @@ export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }
                     }
                   >
                     <Icon className="size-[18px]" aria-hidden />
-                    {label}
+                    {t.nav.items[key]}
                   </NavLink>
                 </li>
               ))}
@@ -44,11 +46,12 @@ export function Sidebar({ items, user }: { items: NavItem[]; user: SessionUser }
         ))}
       </nav>
       <footer className="border-t border-line px-3 pt-4 text-sm">
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <LanguageToggle />
           <SyncBadge />
         </div>
         <p className="font-medium text-ink">{user.name}</p>
-        <p className="text-xs text-ink-muted">{ROLE_LABELS[user.role]}</p>
+        <p className="text-xs text-ink-muted">{t.roles[user.role]}</p>
         <div className="mt-3">
           <SignOutButton
             className="text-left text-xs font-medium text-ink-muted transition-colors hover:text-peacock"
