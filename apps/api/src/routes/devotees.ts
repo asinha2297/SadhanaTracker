@@ -9,10 +9,9 @@ import { accounts, resetRequests } from '../db/schema'
 import { HttpError, validate } from '../http/errors'
 import { param } from '../http/params'
 import { todayIn } from '../lib/dates'
-import { inCare, listAccounts, toAccount } from '../services/accounts'
+import { inCare, issueTemporaryPassword, listAccounts, toAccount } from '../services/accounts'
 import { label, recordAudit } from '../services/audit'
 import { assertContactFree } from '../services/identity'
-import { endAllSessions } from '../services/sessions'
 
 export function devoteeRoutes(ctx: AppContext): Router {
   const router = Router()
@@ -93,13 +92,7 @@ export function devoteeRoutes(ctx: AppContext): Router {
     const account = await findAccount(ctx.db, param(req, 'id'))
     if (!account) throw new HttpError(404)
     if (!inCare(req.account, account)) throw new HttpError(403)
-    const password = temporaryPassword()
-    await ctx.db
-      .update(accounts)
-      .set({ passwordHash: await hashPassword(password, ctx.config.argon), mustChangePassword: true, updatedAt: new Date() })
-      .where(eq(accounts.devoteeId, account.devoteeId))
-    await endAllSessions(ctx.db, account.devoteeId)
-    await ctx.db.delete(resetRequests).where(eq(resetRequests.devoteeId, account.devoteeId))
+    const password = await issueTemporaryPassword(ctx.db, account.devoteeId, ctx.config.argon)
     await recordAudit(ctx.db, req.account, 'PASSWORD_RESET_ISSUED', label(account))
     res.json({ temporaryPassword: password })
   })
