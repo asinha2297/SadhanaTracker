@@ -1,0 +1,42 @@
+[Unit]
+Description=Sharanagati Sadhana Tracker (API and web app)
+Documentation=https://github.com/asinha2297/SadhanaTracker
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sadhana
+Group=sadhana
+WorkingDirectory=/opt/sadhana/apps/api
+EnvironmentFile=/etc/sadhana/env
+# First start on an empty database only; delete the file after the first sign-in.
+EnvironmentFile=-/etc/sadhana/bootstrap.env
+Environment=NODE_ENV=production
+Environment=WEB_DIST=/opt/sadhana/apps/web/dist
+Environment=MIGRATIONS_DIR=/opt/sadhana/apps/api/drizzle
+Environment=PGLITE_DIR=/var/lib/sadhana/pglite
+ExecStart=/usr/local/bin/node /opt/sadhana/apps/api/dist/index.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+StateDirectory=sadhana
+LimitNOFILE=65536
+
+# The process may write only to /var/lib/sadhana (the embedded database, if used) and its private /tmp.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

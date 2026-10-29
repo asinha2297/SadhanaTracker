@@ -1,0 +1,14 @@
+# Reverse proxy in front of the Sadhana Tracker API, with automatic HTTPS from Let's Encrypt.
+# install.sh copies this to /etc/caddy/Caddyfile with your domain in place of the one below.
+# Caddy forwards the browser's Host header and sets X-Forwarded-For/-Proto/-Host, which the API trusts with TRUST_PROXY=1.
+sadhana.example.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+	header -Server
+	log {
+		output file /var/log/caddy/sadhana.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}
