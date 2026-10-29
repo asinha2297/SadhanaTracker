@@ -1,7 +1,9 @@
-import { CONTACT_IN_USE } from '@sadhana/contract'
 import { PASSWORD, TEMPORARY_PASSWORD } from '@sadhana/fixtures'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createApp } from '../app'
+import type { Db } from '../db/client'
+import { createLogger } from '../logger'
 import { signedIn, testContext, type TestContext } from '../test/app'
 
 let ctx: TestContext
@@ -16,6 +18,12 @@ const login = (identifier: string, password: string) =>
 describe('health', () => {
   it('reports ok', async () => {
     await request(ctx.app).get('/api/health').expect(200, { ok: true })
+  })
+
+  it('reports 503 when the database does not answer, so an uptime monitor notices', async () => {
+    const down = { execute: () => Promise.reject(new Error('connection refused')) } as unknown as Db
+    const app = createApp({ db: down, config: ctx.config, logger: createLogger('silent') })
+    await request(app).get('/api/health').expect(503, { ok: false })
   })
 })
 
@@ -101,18 +109,9 @@ describe('sessions', () => {
   })
 })
 
-describe('mobile number verification', () => {
-  it('texts codes only to signed-in devotees, for numbers nobody holds yet', async () => {
-    await request(ctx.app).post('/api/auth/otp').send({ phone: '98450 00210' }).expect(401)
-    const agent = await signedIn(ctx, 'SH-0052')
-    const before = ctx.sms.length
-    await agent.post('/api/auth/otp').send({ phone: '98450 00210' }).expect(202)
-    expect(ctx.sms.at(-1)?.to).toBe('+919845000210')
-    expect(ctx.sms.at(-1)?.message).toMatch(/\b\d{6}\b/)
-    await agent.post('/api/auth/otp').send({ phone: '98450 00210' }).expect(429)
-    const taken = await agent.post('/api/auth/otp').send({ phone: '98765 43210' }).expect(409)
-    expect(taken.body.issues).toEqual([{ path: ['phone'], message: CONTACT_IN_USE.phone }])
-    await agent.post('/api/auth/otp').send({ phone: '12' }).expect(400)
-    expect(ctx.sms).toHaveLength(before + 1)
+describe('mobile numbers', () => {
+  it('are changed on the profile without a texted code: there is no verification endpoint', async () => {
+    const agent = await signedIn(ctx, 'SH-0051')
+    await agent.post('/api/auth/otp').send({ phone: '98450 00210' }).expect(404)
   })
 })

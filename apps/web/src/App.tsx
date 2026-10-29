@@ -1,9 +1,11 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthContext'
 import { PublicOnly } from './auth/PublicOnly'
 import { RequireAuth } from './auth/RequireAuth'
 import { RequireCapability } from './auth/RequireCapability'
 import { RequirePassword } from './auth/RequirePassword'
+import { ScreenLoading } from './components/ScreenState'
 import { LanguageProvider } from './i18n'
 import { AdminScreen } from './screens/AdminScreen'
 import { CreditsScreen } from './screens/CreditsScreen'
@@ -12,7 +14,6 @@ import { EntryScreen } from './screens/EntryScreen'
 import { ExportScreen } from './screens/ExportScreen'
 import { HelpScreen } from './screens/HelpScreen'
 import { HistoryScreen } from './screens/HistoryScreen'
-import { LandingScreen } from './screens/LandingScreen'
 import { LibraryScreen } from './screens/LibraryScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MasterAdminScreen } from './screens/MasterAdminScreen'
@@ -27,12 +28,22 @@ import { WeekScreen } from './screens/WeekScreen'
 import { AppShell } from './shell/AppShell'
 import { SyncLayout } from './sync/SyncContext'
 
+// The landing page carries the verse carousel and its images; devotees opening the app for the day never download it.
+const LandingScreen = lazy(() => import('./screens/LandingScreen').then((module) => ({ default: module.LandingScreen })))
+
 export function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
         <Routes>
-          <Route path="/welcome" element={<LandingScreen />} />
+          <Route
+            path="/welcome"
+            element={
+              <Suspense fallback={<ScreenLoading />}>
+                <LandingScreen />
+              </Suspense>
+            }
+          />
           <Route path="/credits" element={<CreditsScreen />} />
           <Route element={<PublicOnly />}>
             <Route path="/login" element={<LoginScreen />} />

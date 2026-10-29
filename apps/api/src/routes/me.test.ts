@@ -2,7 +2,7 @@ import { addDays } from '@sadhana/domain'
 import request, { type Agent } from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { todayIn } from '../lib/dates'
-import { signedIn, testContext, verifiedCode, type TestContext } from '../test/app'
+import { signedIn, testContext, type TestContext } from '../test/app'
 
 let ctx: TestContext
 let agent: Agent
@@ -140,11 +140,8 @@ describe('profile', () => {
     expect(updated.body.profile.name).toBe('Rādhikā Devī Dāsī')
   })
 
-  it('changes the mobile number only with a code sent to the new one', async () => {
-    const unverified = await agent.put('/api/me/profile').send({ phone: '90000 00000', email: '' }).expect(400)
-    expect(unverified.body.issues).toEqual([{ path: ['code'], message: 'Verify your new mobile number with the code we sent' }])
-    const code = await verifiedCode(ctx, agent, '90000 00000')
-    const updated = await agent.put('/api/me/profile').send({ phone: '90000 00000', email: '', code }).expect(200)
+  it('changes the mobile number without any code; the new number signs in at once', async () => {
+    const updated = await agent.put('/api/me/profile').send({ phone: '90000 00000', email: '' }).expect(200)
     expect(updated.body.profile.phone).toBe('+919000000000')
     await request(ctx.app).post('/api/auth/login').send({ identifier: '90000 00000', password: 'haribol' }).expect(200)
   })

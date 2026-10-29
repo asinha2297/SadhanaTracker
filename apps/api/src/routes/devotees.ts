@@ -76,6 +76,10 @@ export function devoteeRoutes(ctx: AppContext): Router {
     if (patch.name !== undefined && patch.name !== account.name) {
       await recordAudit(ctx.db, req.account, 'NAME_CHANGED', label({ ...account, name: patch.name }), `was ${account.name}`)
     }
+    if (patch.phone !== undefined && patch.phone !== account.phone) {
+      await assertContactFree(ctx.db, { phone: patch.phone }, account.devoteeId)
+      await recordAudit(ctx.db, req.account, 'PHONE_CHANGED', label(account), `was ${account.phone}`)
+    }
     if (patch.canReviewRecords !== undefined && patch.canReviewRecords !== account.canReviewRecords) {
       await recordAudit(ctx.db, req.account, patch.canReviewRecords ? 'RECORD_REVIEW_GRANTED' : 'RECORD_REVIEW_REVOKED', label(account))
     }

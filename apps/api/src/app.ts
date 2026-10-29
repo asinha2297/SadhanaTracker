@@ -1,4 +1,5 @@
 import cookieParser from 'cookie-parser'
+import { sql } from 'drizzle-orm'
 import express, { type Express } from 'express'
 import helmet from 'helmet'
 import { join } from 'node:path'
@@ -7,20 +8,18 @@ import { authRoutes } from './auth/routes'
 import type { Config } from './config'
 import type { Db } from './db/client'
 import { rejectCrossSite } from './http/csrf'
-import { errorHandler, notFound } from './http/errors'
+import { describeError, errorHandler, notFound } from './http/errors'
 import type { Logger } from './logger'
 import { adminRoutes } from './routes/admin'
 import { devoteeRoutes } from './routes/devotees'
 import { libraryRoutes } from './routes/library'
 import { meRoutes } from './routes/me'
 import { reportRoutes } from './routes/report'
-import type { SmsSender } from './services/sms'
 
 export interface AppContext {
   db: Db
   config: Config
   logger: Logger
-  sms: SmsSender
 }
 
 export function createApp(ctx: AppContext): Express {
@@ -64,8 +63,14 @@ export function createApp(ctx: AppContext): Express {
     res.setHeader('Cache-Control', 'no-store')
     next()
   })
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true })
+  app.get('/api/health', async (_req, res) => {
+    try {
+      await ctx.db.execute(sql`select 1`)
+      res.json({ ok: true })
+    } catch (error) {
+      ctx.logger.error({ err: describeError(error) }, 'Database unavailable')
+      res.status(503).json({ ok: false })
+    }
   })
   app.use('/api/auth', authRoutes(ctx))
   app.use('/api/me', meRoutes(ctx))
@@ -77,9 +82,11 @@ export function createApp(ctx: AppContext): Express {
 
   if (ctx.config.webDist) {
     const webDist = ctx.config.webDist
+    // Vite names assets by content hash, so browsers may keep them for a year; the page that points at them is always revalidated.
+    app.use('/assets', express.static(join(webDist, 'assets'), { index: false, immutable: true, maxAge: '1y' }))
     app.use(express.static(webDist, { index: false, maxAge: '1h' }))
     app.get('/{*splat}', (_req, res) => {
-      res.sendFile(join(webDist, 'index.html'))
+      res.sendFile(join(webDist, 'index.html'), { cacheControl: false, headers: { 'Cache-Control': 'no-cache' } })
     })
   }
 

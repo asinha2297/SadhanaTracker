@@ -2,6 +2,9 @@
   "name": "sadhana-tracker",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

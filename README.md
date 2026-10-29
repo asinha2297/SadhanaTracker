@@ -10,14 +10,15 @@ A daily sadhana tracker for the Sharanagati ISKCON congregation: japa, reading a
 | `packages/contract` | The HTTP contract (Zod request/response schemas) shared by the web app and the API. |
 | `packages/fixtures` | Demo accounts, groups and a deterministic entry generator, used by the web mocks and the seed script. |
 | `apps/web` | React 19 + Vite + Tailwind + Motion. Offline-capable (IndexedDB sync queue), MSW mocks for development. |
-| `apps/api` | Express 5 + Drizzle ORM on PostgreSQL. Argon2id passwords, database-backed sessions, RBAC, SMS verification, rate limiting, CSV/XLSX export, audit log. |
+| `apps/api` | Express 5 + Drizzle ORM on PostgreSQL. Argon2id passwords, database-backed sessions, RBAC, rate limiting, CSV/XLSX export, audit log. |
+| `deploy` | Production setup for an Ubuntu 24.04 server such as an Oracle Cloud instance: install, update, backup and restore scripts, systemd units, Caddyfile, and the [runbook](deploy/oracle-cloud.md). |
 
 ## Getting started (development)
 
 ### 1. Prerequisites
 
 - **Node.js 22 or newer** (`node -v`; built and tested on 24) with npm 10+.
-- Nothing else. The database is embedded (PGlite, a real PostgreSQL inside the Node process) and in development verification codes are written to the log instead of being texted.
+- Nothing else. The database is embedded (PGlite, a real PostgreSQL inside the Node process).
 
 ### 2. Install
 
@@ -36,7 +37,7 @@ cp apps/api/.env.example apps/api/.env
 openssl rand -base64 48        # paste the output as SESSION_SECRET in apps/api/.env
 ```
 
-Everything else in `.env` can stay as it is for development: `NODE_ENV=development`, the embedded database, `SMS_PROVIDER=log`. The backend refuses to start without a `SESSION_SECRET`. The file is git-ignored; never commit it.
+Everything else in `.env` can stay as it is for development: `NODE_ENV=development` and the embedded database. The backend refuses to start without a `SESSION_SECRET`. The file is git-ignored; never commit it.
 
 ### 4. Create the database with demo data
 
@@ -82,21 +83,13 @@ Mobile numbers are matched loosely: `98765 43210`, `098765-43210` and `+91 98765
 
 The language pill (English · हिन्दी · বাংলা) sits in the welcome page header, on the sign-in card, in the sidebar footer and on the phone *More* screen. Switching is instant, the choice is remembered on the device (`localStorage` key `sadhana.language`), and a first visit follows the device language when it is Hindi or Bengali. Every string lives in `apps/web/src/i18n/`: `en.ts` is the source of truth, and the compiler refuses a `hi.ts` or `bn.ts` that misses a key. Dates and numbers follow the language, Bengali digits included; Devanagari and Bengali text falls back to self-hosted Noto fonts. The Hindi and Bangla beyond the welcome page's verified strings were machine-translated and should be read by a native-speaking devotee before release.
 
-### Verification codes
-
-A devotee changing their own mobile number is texted a six-digit code. In development no SMS is sent; the code appears in the **backend terminal**:
-
-```
-SMS not sent (SMS_PROVIDER=log): Haribol! 931591 is your Sharanagati Sadhana Tracker code. It expires in 10 minutes.
-```
-
 ### Frontend only (no backend)
 
 ```bash
 npm run dev:web            # http://localhost:5173 against built-in mocks (MSW); needs no backend
 ```
 
-Same demo accounts; data resets on reload; verification codes are printed in the browser console.
+Same demo accounts; data resets on reload.
 
 ### 9. Library
 
@@ -110,7 +103,7 @@ Run from the repository root; none of them need the servers running.
 
 | Command | What it checks | Expected |
 |---|---|---|
-| `npm test` | Domain rules, the web app (jsdom + MSW) and the API (Supertest against a fresh in-memory PostgreSQL per file) | All three workspaces pass (241 tests at the time of writing) |
+| `npm test` | Domain rules, the web app (jsdom + MSW) and the API (Supertest against a fresh in-memory PostgreSQL per file) | All three workspaces pass (280 tests at the time of writing) |
 | `npm run typecheck` | TypeScript across every workspace | No output, exit code 0 |
 | `npm run build` | Production builds: web → `apps/web/dist`, API → `apps/api/dist` | `✓ built`, and no `mockServiceWorker.js` in `apps/web/dist` |
 | `npm audit --omit=dev` | Known vulnerabilities in production dependencies | `found 0 vulnerabilities` |
@@ -141,9 +134,9 @@ With both servers running, open http://localhost:5173:
 1. **Welcome page** — signed out, `/` shows the landing page; *Sign in* leads to the login form.
 2. **Devotee** — sign in with `98765 43210` / `haribol`. *Today* shows rings, streak and the week. *Record* saves today's rounds, reading and hearing; the dashboard then shows *Recorded*. *Week* and *History* show past days; days older than 7 are read-only.
 3. **Offline** — in the browser's developer tools set the network to *Offline*, save an entry: the badge shows *Offline · 1 pending*. Go back online and it syncs.
-4. **Profile** — the name is read-only; changing the mobile number asks for a verification code (printed in the backend terminal). Set a personal target from today onwards.
+4. **Profile** — the name is read-only; the mobile number and email can be changed (each belongs to one account only). Set a personal target from today onwards.
 5. **Coordinator** — sign out, sign in with `98450 00007`. *Report* shows the congregation's week with a row per devotee (Govinda has record review; Lalitā, `98450 00011`, sees totals only). *Master admin* creates devotee accounts and hands over their one-time passwords; a coordinator cannot reset a coordinator's or administrator's password.
-6. **Administrator** — sign in with `98450 00001`. On *Master admin*, create coordinators as well as devotees, rename, deactivate, grant *Record review* to a coordinator, and answer password-reset requests. On *Administration*, set the recommended target and read the audit log. *Export* gives CSV or Excel.
+6. **Administrator** — sign in with `98450 00001`. On *Master admin*, create coordinators as well as devotees, rename, correct a mobile number, deactivate, grant *Record review* to a coordinator, and answer password-reset requests. On *Administration*, set the recommended target and read the audit log. *Export* gives CSV or Excel.
 7. **Newcomer** — sign in with `98450 00108` / `temp-1234`: only the *Choose your own password* screen opens until a new password is set.
 8. **Sign out everywhere** — on *More*, ends the session on every device, not just this one.
 
@@ -156,7 +149,6 @@ The backend reads `apps/api/.env` on start (for `npm run dev:api`, `npm run seed
 | `NODE_ENV` | `development`, `production` or `test`. **Unset means production.** |
 | `SESSION_SECRET` | Required (32+ random characters). Signs session cookies; changing it signs everyone out. There is no built-in fallback. |
 | `DATABASE_URL` | PostgreSQL connection string. Empty uses PGlite in `PGLITE_DIR`. |
-| `SMS_PROVIDER` | How verification codes reach devotees: `twilio` (plus `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`) or `log`, which only writes them to the server log. Defaults to `log` in development; production refuses to start without an explicit choice. Another provider is one function in `apps/api/src/services/sms.ts`. |
 | `TRUST_PROXY` | `false` when clients connect directly; otherwise the number of proxies in front (`1`), or an address list. Wrong values either let clients spoof their IP past rate limits or make everyone share one limit. |
 | `COOKIE_SECURE` | Defaults to `true` everywhere except development. |
 | `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_PASSWORD` | On an empty database, creates administrator `SH-0001` with this mobile number and temporary password. |
@@ -172,32 +164,34 @@ After changing `apps/api/src/db/schema.ts`, run `npm run db:generate -w apps/api
 ## Production
 
 1. Build both apps: `npm run build` (web → `apps/web/dist` without the development mock worker, API → `apps/api/dist`).
-2. Set the environment: `NODE_ENV=production`, `SESSION_SECRET`, `SMS_PROVIDER` (Twilio for public sign-up; `log` is allowed but then nobody receives codes), `DATABASE_URL` for a managed PostgreSQL (or keep PGlite on a persistent disk), `TRUST_PROXY=1` behind your reverse proxy, and on the very first start `BOOTSTRAP_ADMIN_PHONE` and `BOOTSTRAP_ADMIN_PASSWORD`.
+2. Set the environment: `NODE_ENV=production`, `SESSION_SECRET`, `DATABASE_URL` for PostgreSQL (or keep PGlite on a persistent disk), `TRUST_PROXY=1` behind your reverse proxy, and on the very first start `BOOTSTRAP_ADMIN_PHONE` and `BOOTSTRAP_ADMIN_PASSWORD`.
 3. Start: `npm start` serves the API and the built web app together on `PORT` (3000). Put it behind HTTPS; cookies are `Secure` in production. The reverse proxy must pass the browser's original `Host` or set `X-Forwarded-Host` (nginx: `proxy_set_header Host $host;`; Caddy and most platforms do this by default) and you set `TRUST_PROXY=1`, otherwise the cross-site check refuses browsers that lack Fetch Metadata (Safari before 16.4).
-4. First sign-in: the bootstrap administrator signs in with that mobile number and temporary password and must choose a new one. Remove the two bootstrap variables afterwards. Administrators can add devotees without SMS (they hand over a one-time password in person); only public sign-up and mobile-number changes need SMS.
+4. First sign-in: the bootstrap administrator signs in with that mobile number and temporary password and must choose a new one. Remove the two bootstrap variables afterwards. Administrators add devotees (handing over a one-time password in person) and can correct a devotee's mobile number from the roster; nothing is ever texted.
 
 ```bash
 npm run build
 NODE_ENV=production SESSION_SECRET=<32+ random chars> \
-SMS_PROVIDER=twilio TWILIO_ACCOUNT_SID=AC… TWILIO_AUTH_TOKEN=… TWILIO_FROM=+1… \
 DATABASE_URL=postgres://user:password@host:5432/sadhana?sslmode=require TRUST_PROXY=1 \
 BOOTSTRAP_ADMIN_PHONE=+91… BOOTSTRAP_ADMIN_PASSWORD=<temporary password> \
 npm start
 ```
 
+### Deploying to Oracle Cloud (or any Ubuntu 24.04 server)
+
+[`deploy/oracle-cloud.md`](deploy/oracle-cloud.md) is the runbook: create the instance, open ports 80 and 443, point the domain, then run [`deploy/install.sh`](deploy/install.sh), which installs Node 24, Caddy (automatic HTTPS), PostgreSQL and the app as a sandboxed systemd service with a nightly backup timer. `deploy/update.sh` deploys the latest commit; `deploy/backup.sh` and `deploy/restore.sh` back the database up (locally and to OCI Object Storage) and restore it. Needs Node 22 or newer (`.nvmrc` says 24); GitHub Actions runs typecheck, tests, builds and the dependency audit on every push.
+
 ## Security notes
 
-- **No public sign-up.** Accounts are created by coordinators (devotees only) and administrators (any role), each with a generated one-time password that must be replaced at first sign-in. A devotee changing their own mobile number needs a six-digit code texted to it (10-minute expiry, 5 tries, one code a minute per number; signed-in devotees only). A number can belong to one account only.
+- **No public sign-up, no SMS.** Accounts are created by coordinators (devotees only) and administrators (any role), each with a generated one-time password that must be replaced at first sign-in. Devotees change their own mobile number and email on the profile; administrators correct a number from the roster. A number or email can belong to one account only.
 - **Sessions live in the database.** The cookie (HttpOnly, SameSite=Lax, Secure outside development, 14 days) carries only a signed session id. Signing out ends that session on the server, so a copied cookie is useless afterwards; "Sign out everywhere", a password change and an administrator issuing a one-time password end every session of the account.
 - Passwords: argon2id. A one-time password opens only the password screen until it is replaced (enforced by the API), and changing a password requires the current one.
-- **Rate limits** are counted in the database, so they hold across several API instances: 5 failed sign-ins per identifier and 30 per address per 15 minutes; 30 reset requests or verification texts per address per 15 minutes.
+- **Rate limits** are counted in the database, so they hold across several API instances: 5 failed sign-ins per identifier from one address and 30 per address per 15 minutes; 30 reset requests per address per 15 minutes.
+- `/api/health` answers `{"ok":true}` only after a round trip to the database and 503 otherwise, so one uptime check covers both. Hashed assets under `/assets` are served immutable for a year; the page itself is always revalidated.
 - **Cross-site requests** that would change state are refused by Fetch Metadata (`Sec-Fetch-Site`) or, failing that, by comparing `Origin` with the request's host (`X-Forwarded-Host` behind a trusted proxy), on top of the SameSite cookie. The content security policy allows no inline scripts or styles.
 - Request logs record method, URL and status only, never headers or cookies; unexpected errors are logged without query parameters. API responses are `Cache-Control: no-store`.
 - Devotees cannot rename themselves; administrators correct names from the roster, and the change is audited. New devotee IDs are random six-digit numbers.
 - Coordinators see the congregation's totals; a coordinator sees individual rows (numbers only, never reflections) only once an administrator grants them record review. Coordinators can create and reset devotee accounts only; other coordinators and administrators are administrators' business. The last active administrator cannot be demoted or deactivated. Targets cannot be dated in the past. CSV exports defuse spreadsheet formulas.
 - Signing out clears the browser's cached data and the offline queue (after confirming if entries haven't synced).
-
-Verification texts can only be requested by signed-in devotees, so nobody outside the congregation can make the API spend SMS.
 
 ## Troubleshooting
 
@@ -208,6 +202,5 @@ Verification texts can only be requested by signed-in devotees, so nobody outsid
 | The only administrator forgot their password (nobody left who could issue a one-time password) | Stop the backend if it runs on PGlite, then `npm run reset-password -w apps/api -- 98450 00001` (a mobile number or email). It prints a one-time password; sign in with it and choose a new one. Every session of that account is ended. |
 | A migration fails on your old development database | Development data is disposable: delete `apps/api/data/sadhana` and seed again. |
 | Port 3000 or 5173 is taken | `PORT=3001 npm run dev:api` and `API_URL=http://localhost:3001 npm run dev:web:live -- -- --port 5174` (the double `--` passes the port through two npm scripts to Vite). |
-| "Code sent" but no SMS arrives | In development the code is in the backend terminal; in production set `SMS_PROVIDER=twilio`. |
 | `403 {"reason":"CROSS_SITE"}` from a script or another site | The API accepts browser requests only from its own origin. Use the Vite proxy (same origin) in development; non-browser clients that send no `Origin` header are accepted. |
 | Signed out unexpectedly after a deploy | A changed `SESSION_SECRET` or a password change ends sessions by design. |

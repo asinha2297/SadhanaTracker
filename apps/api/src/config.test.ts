@@ -7,7 +7,11 @@ const SECRET = 'a-test-secret-that-is-long-enough-123'
 describe('loadConfig', () => {
   it('treats a missing NODE_ENV as production and then demands a session secret', () => {
     expect(() => loadConfig({})).toThrow(/SESSION_SECRET/)
-    expect(loadConfig({ SESSION_SECRET: SECRET, SMS_PROVIDER: 'log' }).nodeEnv).toBe('production')
+    expect(loadConfig({ SESSION_SECRET: SECRET }).nodeEnv).toBe('production')
+  })
+
+  it('needs no SMS settings: mobile numbers are not verified by text', () => {
+    expect(loadConfig({ SESSION_SECRET: SECRET })).not.toHaveProperty('sms')
   })
 
   it('has no built-in secret outside tests', () => {
@@ -17,7 +21,7 @@ describe('loadConfig', () => {
   })
 
   it('sends Secure cookies everywhere except development and tests', () => {
-    expect(loadConfig({ SESSION_SECRET: SECRET, SMS_PROVIDER: 'log' }).cookieSecure).toBe(true)
+    expect(loadConfig({ SESSION_SECRET: SECRET }).cookieSecure).toBe(true)
     expect(loadConfig({ NODE_ENV: 'development', SESSION_SECRET: SECRET }).cookieSecure).toBe(false)
     expect(loadConfig({ NODE_ENV: 'development', SESSION_SECRET: SECRET, COOKIE_SECURE: 'true' }).cookieSecure).toBe(true)
   })
@@ -40,7 +44,7 @@ describe('loadConfig', () => {
 })
 
 describe('demoSeedRefusal', () => {
-  const config = (env: Record<string, string>) => loadConfig({ SESSION_SECRET: SECRET, SMS_PROVIDER: 'log', ...env })
+  const config = (env: Record<string, string>) => loadConfig({ SESSION_SECRET: SECRET, ...env })
 
   it('never seeds demo accounts in production', () => {
     expect(demoSeedRefusal(config({}))).toMatch(/production/)
@@ -51,23 +55,5 @@ describe('demoSeedRefusal', () => {
     expect(demoSeedRefusal(config(external))).toMatch(/ALLOW_DEMO_SEED/)
     expect(demoSeedRefusal(config({ ...external, ALLOW_DEMO_SEED: 'true' }))).toBeUndefined()
     expect(demoSeedRefusal(config({ NODE_ENV: 'development' }))).toBeUndefined()
-  })
-})
-
-describe('SMS', () => {
-  it('logs codes in development and demands a real sender, or an explicit choice, in production', () => {
-    expect(loadConfig({ NODE_ENV: 'development', SESSION_SECRET: SECRET }).sms).toEqual({ provider: 'log' })
-    expect(() => loadConfig({ SESSION_SECRET: SECRET })).toThrow(/SMS_PROVIDER/)
-    expect(loadConfig({ SESSION_SECRET: SECRET, SMS_PROVIDER: 'log' }).sms).toEqual({ provider: 'log' })
-    expect(() => loadConfig({ SESSION_SECRET: SECRET, SMS_PROVIDER: 'twilio' })).toThrow(/TWILIO_/)
-    expect(
-      loadConfig({
-        SESSION_SECRET: SECRET,
-        SMS_PROVIDER: 'twilio',
-        TWILIO_ACCOUNT_SID: 'AC1',
-        TWILIO_AUTH_TOKEN: 'token',
-        TWILIO_FROM: '+15550001',
-      }).sms,
-    ).toEqual({ provider: 'twilio', accountSid: 'AC1', authToken: 'token', from: '+15550001' })
   })
 })

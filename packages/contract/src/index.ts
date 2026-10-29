@@ -38,24 +38,6 @@ export const CONTACT_IN_USE = {
   email: 'An account with this email already exists.',
 } as const
 
-export const VERIFICATION = {
-  required: 'Verify your new mobile number with the code we sent',
-  wrong: "That code isn't right. Check the SMS and try again.",
-  expired: 'This code has expired. Request a new one.',
-  exhausted: 'Too many wrong tries. Request a new code.',
-} as const
-
-const verificationCode = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code we sent')
-
-const optionalCode = z
-  .string()
-  .trim()
-  .optional()
-  .transform((text) => text || undefined)
-  .pipe(verificationCode.optional())
-
-export const OtpRequestSchema = z.object({ phone: mobileNumber })
-
 /** The congregation's library: what devotees pick from when they record reading and hearing. */
 const libraryText = (message: string) => z.string().trim().min(1, message).max(200, 'Keep it shorter')
 
@@ -139,11 +121,10 @@ export const ProfileInputSchema = z.object({
   phone: mobileNumber,
   email: optionalEmail,
   address: optionalText,
-  code: optionalCode,
 })
 export type ProfileInput = z.infer<typeof ProfileInputSchema>
 
-export const ProfileSchema = ProfileInputSchema.omit({ code: true }).extend({
+export const ProfileSchema = ProfileInputSchema.extend({
   devoteeId: z.string(),
   name: z.string(),
 })
@@ -218,6 +199,7 @@ export type CreatedDevotee = z.infer<typeof CreatedDevoteeSchema>
 
 export const DevoteePatchSchema = z.object({
   name: z.string().trim().min(1, "Enter the devotee's name").max(200, 'Keep it shorter').optional(),
+  phone: mobileNumber.optional(),
   active: z.boolean().optional(),
   role: RoleSchema.optional(),
   canReviewRecords: z.boolean().optional(),

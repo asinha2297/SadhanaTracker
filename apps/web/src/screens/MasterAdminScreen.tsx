@@ -1,14 +1,15 @@
-import { hasCapability, RoleSchema } from '@sadhana/domain'
+import { hasCapability, normalizePhone, RoleSchema } from '@sadhana/domain'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { accountsQuery, issuePassword, patchDevotee } from '../api/accounts'
+import { applyFieldIssues } from '../api/client'
 import type { Account } from '../api/contract'
 import { useUser } from '../auth/AuthContext'
 import { Card } from '../components/Card'
 import { FormAlert } from '../components/FormAlert'
 import { PageHeader } from '../components/PageHeader'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
-import { useT } from '../i18n'
+import { translateMessage, useT } from '../i18n'
 import { useFormat } from '../i18n/format'
 import { NewDevoteeForm } from './accounts/NewDevoteeForm'
 import { PasswordHandover, SMALL_BUTTON, SMALL_PRIMARY, type Handover } from './accounts/PasswordHandover'
@@ -76,6 +77,7 @@ export function MasterAdminScreen() {
                         })
                       }
                     />
+                    <PhoneLine account={account} isAdmin={isAdmin} onSaved={refresh} />
                   </td>
                   <td className="px-3 py-3">
                     {isAdmin ? (
@@ -199,5 +201,67 @@ function NameCell({ account, isAdmin, onRename }: { account: Account; isAdmin: b
       )}
       <span className="block text-xs text-ink-muted">{account.devoteeId}</span>
     </>
+  )
+}
+
+/** The number a devotee signs in with. Administrators correct it here for anyone who can no longer sign in to change it themselves. */
+function PhoneLine({ account, isAdmin, onSaved }: { account: Account; isAdmin: boolean; onSaved: () => Promise<unknown> }) {
+  const t = useT()
+  const [draft, setDraft] = useState<string>()
+  const [error, setError] = useState<string>()
+  const close = () => {
+    setDraft(undefined)
+    setError(undefined)
+  }
+  if (draft === undefined) {
+    return (
+      <span className="block text-xs text-ink-muted">
+        <span>{account.phone}</span>
+        {isAdmin && (
+          <button type="button" onClick={() => setDraft(account.phone)} className="ml-2 font-semibold text-saffron-text">
+            {t.masterAdmin.editPhone}
+          </button>
+        )}
+      </span>
+    )
+  }
+  const save = async () => {
+    const phone = normalizePhone(draft)
+    if (!phone) return setError(draft.trim() ? t.messages.phoneInvalid : t.messages.phoneRequired)
+    try {
+      await patchDevotee(account.devoteeId, { phone })
+      await onSaved()
+      close()
+    } catch (caught) {
+      if (!applyFieldIssues(caught, (_field, message) => setError(translateMessage(t, message)))) setError(t.masterAdmin.changeFailed)
+    }
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        void save()
+      }}
+      className="mt-1 flex flex-wrap items-center gap-2"
+    >
+      <input
+        aria-label={t.masterAdmin.newPhone}
+        type="tel"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        className="rounded-lg border border-line bg-card px-2 py-1 text-sm text-ink"
+      />
+      <button type="submit" className={SMALL_PRIMARY}>
+        {t.masterAdmin.savePhone}
+      </button>
+      <button type="button" onClick={close} className={SMALL_BUTTON}>
+        {t.masterAdmin.cancel}
+      </button>
+      {error && (
+        <p role="alert" className="w-full text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </form>
   )
 }

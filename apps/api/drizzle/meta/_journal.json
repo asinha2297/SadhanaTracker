@@ -50,6 +50,13 @@
       "when": 1793177248921,
       "tag": "0006_library",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793291969338,
+      "tag": "0007_drop_phone_verifications",
+      "breakpoints": true
     }
   ]
 }

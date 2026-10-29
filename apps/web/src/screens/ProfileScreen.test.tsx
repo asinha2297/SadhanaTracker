@@ -2,7 +2,6 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { freezeTime, SATURDAY_EVENING } from '../test/clock'
-import { lastVerificationCode } from '../mocks/handlers'
 import { renderAt } from '../test/render'
 
 freezeTime(SATURDAY_EVENING)
@@ -22,10 +21,9 @@ describe('ProfileScreen', () => {
     await user.type(email, 'radhika.dd@example.org')
     await user.click(screen.getByRole('button', { name: 'Save profile' }))
     expect(await screen.findByText('Profile saved.')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Verification code')).not.toBeInTheDocument()
   })
 
-  it('verifies a new mobile number by SMS code before saving it', async () => {
+  it('saves a new mobile number straight away; no code is involved', async () => {
     renderAt('/profile')
     const user = userEvent.setup()
     const phone = await screen.findByLabelText('Mobile number')
@@ -34,14 +32,10 @@ describe('ProfileScreen', () => {
     expect(await screen.findByText('Enter your mobile number')).toBeInTheDocument()
     await user.type(phone, '90000 00000')
     await user.click(screen.getByRole('button', { name: 'Save profile' }))
-    expect(await screen.findByText('Verify your new mobile number with the code we sent')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Send code' }))
-    expect(await screen.findByText(/Code sent to \+919000000000/)).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Verification code'), lastVerificationCode() ?? '')
-    await user.click(screen.getByRole('button', { name: 'Save profile' }))
     expect(await screen.findByText('Profile saved.')).toBeInTheDocument()
     expect(phone).toHaveValue('+919000000000')
     expect(screen.queryByLabelText('Verification code')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send code' })).not.toBeInTheDocument()
   })
 
   it('sets a personal target from today', async () => {

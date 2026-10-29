@@ -35,10 +35,6 @@ export async function logoutEverywhere(): Promise<void> {
   await api('/api/auth/logout-all', { method: 'POST' })
 }
 
-export async function requestCode(phone: string): Promise<void> {
-  await api('/api/auth/otp', { method: 'POST', body: { phone } })
-}
-
 export async function requestReset(identifier: string): Promise<void> {
   await api('/api/auth/reset-request', { method: 'POST', body: { identifier } })
 }

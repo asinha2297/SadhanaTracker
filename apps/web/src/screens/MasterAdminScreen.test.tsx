@@ -18,7 +18,8 @@ describe('MasterAdminScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }))
     expect(await screen.findByText('hari-200')).toBeInTheDocument()
     expect(screen.getByText(/share this one-time password in person/i)).toBeInTheDocument()
-    expect(screen.getByText(/\+919845000300/)).toBeInTheDocument()
+    // Once in the handover note, once in the roster row.
+    expect(screen.getAllByText(/\+919845000300/)).toHaveLength(2)
     const row = await screen.findByRole('row', { name: /Haridāsa Dāsa/ })
     expect(within(row).getByText('Devotee')).toBeInTheDocument()
   })
@@ -32,7 +33,27 @@ describe('MasterAdminScreen', () => {
     expect(within(adminRow).queryByRole('button', { name: 'Issue one-time password' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit number' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Record review/ })).not.toBeInTheDocument()
+  })
+
+  it('lets an administrator correct a devotee’s mobile number, refusing one another account signs in with', async () => {
+    setMockSession(admin)
+    renderAt('/master-admin')
+    const user = userEvent.setup()
+    const row = await screen.findByRole('row', { name: /Yaśodā Devī Dāsī/ })
+    expect(within(row).getByText('+919845000043')).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: 'Edit number' }))
+    const input = within(row).getByLabelText('New mobile number')
+    await user.clear(input)
+    await user.type(input, '98765 43210')
+    await user.click(within(row).getByRole('button', { name: 'Save number' }))
+    expect(await within(row).findByText('An account with this mobile number already exists.')).toBeInTheDocument()
+    await user.clear(input)
+    await user.type(input, '98450 00777')
+    await user.click(within(row).getByRole('button', { name: 'Save number' }))
+    expect(await within(row).findByText('+919845000777')).toBeInTheDocument()
+    expect(within(row).queryByLabelText('New mobile number')).not.toBeInTheDocument()
   })
 
   it('lets an administrator create a coordinator', async () => {

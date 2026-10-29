@@ -40,15 +40,6 @@ export const sessions = pgTable('sessions', {
   expiresAt: expiresAt(),
 })
 
-/** The code texted to a mobile number that is being claimed, until it is used or runs out. */
-export const phoneVerifications = pgTable('phone_verifications', {
-  phone: text('phone').primaryKey(),
-  codeHash: text('code_hash').notNull(),
-  attempts: integer('attempts').notNull().default(0),
-  sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
-  expiresAt: expiresAt(),
-})
-
 /** Rate-limit counters, shared by every API instance. */
 export const rateLimits = pgTable('rate_limits', {
   key: text('key').primaryKey(),

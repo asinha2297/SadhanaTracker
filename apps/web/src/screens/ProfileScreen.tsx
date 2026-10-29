@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { normalizePhone, resolveTarget, type Target, type TargetHistory } from '@sadhana/domain'
+import { resolveTarget, type Target, type TargetHistory } from '@sadhana/domain'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
@@ -12,7 +12,6 @@ import { Card } from '../components/Card'
 import { FormAlert } from '../components/FormAlert'
 import { PageHeader } from '../components/PageHeader'
 import { ScreenError, ScreenLoading } from '../components/ScreenState'
-import { SendCode } from '../components/SendCode'
 import { EYEBROW } from '../components/styles'
 import { TextField } from '../components/TextField'
 import { useT } from '../i18n'
@@ -49,13 +48,12 @@ export function ProfileScreen() {
 }
 
 type ProfileFormValues = z.input<typeof ProfileInputSchema>
-type ContactField = 'phone' | 'email' | 'code'
+type ContactField = 'phone' | 'email'
 
 const formValues = (profile: Profile): ProfileFormValues => ({
   phone: profile.phone,
   email: profile.email ?? '',
   address: profile.address ?? '',
-  code: '',
 })
 
 function ProfileForm({ profile }: { profile: Profile }) {
@@ -68,15 +66,11 @@ function ProfileForm({ profile }: { profile: Profile }) {
     handleSubmit,
     reset,
     setError,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues, unknown, ProfileInput>({
     resolver: zodResolver(ProfileInputSchema),
     defaultValues: formValues(profile),
   })
-  const phone = useWatch({ control, name: 'phone' })
-  // A new number must be verified before it becomes the way this devotee signs in.
-  const phoneChanged = (normalizePhone(phone) ?? phone.trim()) !== profile.phone
 
   const submit = handleSubmit(async (input) => {
     setSaved(false)
@@ -105,22 +99,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
           <p className="text-xs text-ink-muted">{t.profile.nameHint}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <TextField id="phone" label={t.profile.phone} type="tel" autoComplete="tel" error={errors.phone?.message} {...register('phone')} />
-            {phoneChanged && <SendCode phone={phone} onPhoneError={(message) => setError('phone', { message })} />}
-          </div>
+          <TextField id="phone" label={t.profile.phone} type="tel" autoComplete="tel" error={errors.phone?.message} {...register('phone')} />
           <TextField id="email" label={t.profile.email} type="email" autoComplete="email" error={errors.email?.message} {...register('email')} />
         </div>
-        {phoneChanged && (
-          <TextField
-            id="code"
-            label={t.profile.code}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            error={errors.code?.message}
-            {...register('code')}
-          />
-        )}
         <p className="text-xs text-ink-muted">{t.profile.signInHint}</p>
         <TextField id="address" label={t.profile.address} autoComplete="street-address" error={errors.address?.message} {...register('address')} />
         <FormAlert message={failure} />

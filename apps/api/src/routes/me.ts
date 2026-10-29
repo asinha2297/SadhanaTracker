@@ -10,7 +10,6 @@ import { HttpError, validate } from '../http/errors'
 import { todayIn } from '../lib/dates'
 import { assertLibraryIds, entriesBetween, recordsFor, saveSessions } from '../services/entries'
 import { assertContactFree } from '../services/identity'
-import { consumeVerification } from '../services/otp'
 import { assertNotPast, targetHistory } from '../services/targets'
 
 const RangeSchema = z.object({ from: LocalDateSchema, to: LocalDateSchema })
@@ -112,7 +111,6 @@ export function meRoutes(ctx: AppContext): Router {
   router.put('/profile', async (req, res) => {
     const input = validate(ProfileInputSchema, req.body)
     await assertContactFree(ctx.db, input, req.account.devoteeId)
-    if (input.phone !== req.account.phone) await consumeVerification(ctx.db, ctx.config.sessionSecret, input.phone, input.code)
     const [updated] = await ctx.db
       .update(accounts)
       .set({

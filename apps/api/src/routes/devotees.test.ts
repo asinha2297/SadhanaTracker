@@ -103,4 +103,17 @@ describe('accounts', () => {
     await admin.patch('/api/devotees/SH-9999').send({ active: false }).expect(404)
     await admin.patch('/api/devotees/SH-0043').send({ role: 'EMPEROR' }).expect(400)
   })
+
+  it('lets administrators correct a mobile number, which stays unique, becomes the sign-in and is audited', async () => {
+    await coordinator.patch('/api/devotees/SH-0046').send({ phone: '98450 00399' }).expect(403)
+    const taken = await admin.patch('/api/devotees/SH-0046').send({ phone: '98765 43210' }).expect(409)
+    expect(taken.body.issues).toEqual([{ path: ['phone'], message: 'An account with this mobile number already exists.' }])
+    await admin.patch('/api/devotees/SH-0046').send({ phone: '12' }).expect(400)
+    const changed = await admin.patch('/api/devotees/SH-0046').send({ phone: '98450 00399' }).expect(200)
+    expect(changed.body.devotee.phone).toBe('+919845000399')
+    await login('+919845000399', PASSWORD).expect(200)
+    await login('+919845000046', PASSWORD).expect(401)
+    const audit = await admin.get('/api/admin/audit').expect(200)
+    expect(audit.body.events[0]).toMatchObject({ action: 'PHONE_CHANGED', subject: 'Gopīnātha Dāsa (SH-0046)', details: 'was +919845000046' })
+  })
 })

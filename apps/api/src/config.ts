@@ -16,29 +16,8 @@ const EnvSchema = z.object({
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   BOOTSTRAP_ADMIN_PHONE: z.string().optional(),
   ALLOW_DEMO_SEED: z.enum(['true', 'false']).default('false'),
-  SMS_PROVIDER: z.enum(['log', 'twilio']).optional(),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_FROM: z.string().optional(),
   LOG_LEVEL: z.string().default('info'),
 })
-type Env = z.infer<typeof EnvSchema>
-
-/** How verification codes reach devotees. `log` writes them to the server log instead. */
-export type SmsConfig = { provider: 'log' } | { provider: 'twilio'; accountSid: string; authToken: string; from: string }
-
-function smsOf(env: Env, production: boolean): SmsConfig {
-  const provider = env.SMS_PROVIDER ?? (production ? undefined : 'log')
-  if (!provider) {
-    throw new Error(
-      'SMS_PROVIDER is required in production: "twilio" (with TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM) texts verification codes to devotees; "log" only writes them to the server log.',
-    )
-  }
-  if (provider === 'log') return { provider }
-  const { TWILIO_ACCOUNT_SID: accountSid, TWILIO_AUTH_TOKEN: authToken, TWILIO_FROM: from } = env
-  if (!accountSid || !authToken || !from) throw new Error('SMS_PROVIDER=twilio needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM')
-  return { provider, accountSid, authToken, from }
-}
 
 export interface ArgonOptions {
   memoryCost: number
@@ -62,7 +41,6 @@ export interface Config {
   webDist: string | undefined
   bootstrapAdmin: BootstrapAdmin | undefined
   allowDemoSeed: boolean
-  sms: SmsConfig
   logLevel: string
   argon: ArgonOptions
 }
@@ -106,7 +84,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     webDist: parsed.WEB_DIST ? resolve(parsed.WEB_DIST) : undefined,
     bootstrapAdmin: bootstrapAdminOf(parsed.BOOTSTRAP_ADMIN_PASSWORD, parsed.BOOTSTRAP_ADMIN_PHONE),
     allowDemoSeed: parsed.ALLOW_DEMO_SEED === 'true',
-    sms: smsOf(parsed, parsed.NODE_ENV === 'production'),
     logLevel: parsed.LOG_LEVEL,
     argon: testing ? { memoryCost: 1024, timeCost: 1 } : { memoryCost: 19_456, timeCost: 2 },
   }

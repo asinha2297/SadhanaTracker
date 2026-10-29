@@ -28,11 +28,9 @@ import {
   LectureInputSchema,
   LIBRARY_DUPLICATE,
   NewDevoteeSchema,
-  OtpRequestSchema,
   ProfileInputSchema,
   PutEntrySchema,
   RemindersSchema,
-  VERIFICATION,
   type Account as AccountView,
   type AuditEvent,
   type Book,
@@ -89,10 +87,6 @@ interface MockState {
   lectures: Lecture[]
   nextLibraryId: number
   nextId: number
-  /** Verification codes "texted" to numbers being claimed, keyed by E.164 number. */
-  codes: Map<string, { code: string; attempts: number }>
-  nextCode: number
-  lastCode?: string
 }
 
 const PERSIST_SESSION = import.meta.env.MODE === 'development'
@@ -123,8 +117,6 @@ const freshState = (): MockState => ({
   lectures: LECTURES.map((lecture) => ({ ...lecture, uses: 0 })),
   nextLibraryId: 100,
   nextId: 200,
-  codes: new Map(),
-  nextCode: 246810,
 })
 
 let state = freshState()
@@ -181,9 +173,6 @@ const libraryIssues = (entry: DailyEntry) => [
   ),
 ]
 
-/** The code the mock last "texted", for tests and for trying the flow against the mocks. */
-export const lastVerificationCode = (): string | undefined => state.lastCode
-
 export function savedEntry(devoteeId: string, localDate: LocalDate): EntryRecord | undefined {
   return state.entries.get(`${devoteeId}|${localDate}`)
 }
@@ -219,22 +208,6 @@ const contactIssues = (contact: { phone: string; email?: string }, exceptDevotee
     .map((field) => ({ path: [field], message: CONTACT_IN_USE[field] }))
 
 const conflict = (issues: { path: string[]; message: string }[]) => HttpResponse.json({ issues }, { status: 409 })
-
-const refuseCode = (message: string) => HttpResponse.json({ issues: [{ path: ['code'], message }] }, { status: 400 })
-
-/** Spends the code sent to `phone`; the message to show when it cannot be. */
-function codeProblem(phone: string, code: string | undefined): string | undefined {
-  if (!code) return VERIFICATION.required
-  const pending = state.codes.get(phone)
-  if (!pending) return VERIFICATION.wrong
-  if (pending.attempts >= 5) return VERIFICATION.exhausted
-  if (pending.code !== code) {
-    pending.attempts += 1
-    return VERIFICATION.wrong
-  }
-  state.codes.delete(phone)
-  return undefined
-}
 
 function entryRecord(devoteeId: string, localDate: LocalDate): EntryRecord | undefined {
   const saved = state.entries.get(`${devoteeId}|${localDate}`)
@@ -397,20 +370,6 @@ export const handlers = [
     return status(204)
   }),
 
-  http.post('/api/auth/otp', async ({ request }) => {
-    const user = guard()
-    if (user instanceof Response) return user
-    const parsed = OtpRequestSchema.safeParse(await request.json())
-    if (!parsed.success) return status(400)
-    const issues = contactIssues({ phone: parsed.data.phone })
-    if (issues.length) return conflict(issues)
-    const code = String(state.nextCode++)
-    state.codes.set(parsed.data.phone, { code, attempts: 0 })
-    state.lastCode = code
-    if (PERSIST_SESSION) console.info(`[mock SMS] ${parsed.data.phone}: your code is ${code}`)
-    return status(202)
-  }),
-
   http.post('/api/auth/password', async ({ request }) => {
     if (!state.session) return status(401)
     const { currentPassword, newPassword } = (await request.json()) as { currentPassword: string; newPassword: string }
@@ -494,12 +453,7 @@ export const handlers = [
     const issues = contactIssues(parsed.data, user.devoteeId)
     if (issues.length) return conflict(issues)
     const account = must(accountOf(user.devoteeId))
-    const { code, ...contact } = parsed.data
-    if (contact.phone !== account.phone) {
-      const problem = codeProblem(contact.phone, code)
-      if (problem) return refuseCode(problem)
-    }
-    Object.assign(account, contact)
+    Object.assign(account, parsed.data)
     return HttpResponse.json({ profile: profileOf(account) })
   }),
 
@@ -591,6 +545,11 @@ export const handlers = [
     if (parsed.data.role && parsed.data.role !== account.role) audit(user, 'ROLE_CHANGED', label(account), parsed.data.role)
     if (parsed.data.name && parsed.data.name !== account.name) {
       audit(user, 'NAME_CHANGED', label({ ...account, name: parsed.data.name }), `was ${account.name}`)
+    }
+    if (parsed.data.phone && parsed.data.phone !== account.phone) {
+      const issues = contactIssues({ phone: parsed.data.phone }, account.devoteeId)
+      if (issues.length) return conflict(issues)
+      audit(user, 'PHONE_CHANGED', label(account), `was ${account.phone}`)
     }
     if (parsed.data.canReviewRecords !== undefined && parsed.data.canReviewRecords !== account.canReviewRecords) {
       audit(user, parsed.data.canReviewRecords ? 'RECORD_REVIEW_GRANTED' : 'RECORD_REVIEW_REVOKED', label(account))

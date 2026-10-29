@@ -1,4 +1,4 @@
-import { ChangePasswordSchema, LoginSchema, OtpRequestSchema, ResetRequestSchema } from '@sadhana/contract'
+import { ChangePasswordSchema, LoginSchema, ResetRequestSchema } from '@sadhana/contract'
 import { parseIdentifier } from '@sadhana/domain'
 import { eq } from 'drizzle-orm'
 import { Router, type Request, type Response } from 'express'
@@ -8,8 +8,6 @@ import { findAccountByIdentifier } from '../db/queries'
 import { accounts, resetRequests } from '../db/schema'
 import { HttpError, validate } from '../http/errors'
 import { DbRateLimitStore } from '../http/rateLimitStore'
-import { assertContactFree } from '../services/identity'
-import { sendVerification } from '../services/otp'
 import { endAllSessions, endSession, startSession } from '../services/sessions'
 import { requireAuth } from './middleware'
 import { hashPassword, verifyPassword } from './password'
@@ -48,7 +46,7 @@ export function authRoutes(ctx: AppContext): Router {
       },
     })
   // Five wrong passwords per identifier, thirty per address whatever the identifier, and a cap on
-  // reset requests and verification texts per address.
+  // reset requests per address.
   const loginLimiter = limiter('login', 5, (req) => `${byAddress(req)}:${attemptedIdentifier(req.body)}`, true)
   const sprayLimiter = limiter('spray', 30, byAddress, true)
   const publicLimiter = limiter('public', 30, byAddress)
@@ -107,14 +105,6 @@ export function authRoutes(ctx: AppContext): Router {
     if (account) {
       await ctx.db.insert(resetRequests).values({ devoteeId: account.devoteeId }).onConflictDoNothing()
     }
-    res.status(202).end()
-  })
-
-  // Signed-in devotees verify a new number of their own; nobody else can make the API send texts.
-  router.post('/otp', publicLimiter, requireAuth(ctx), async (req, res) => {
-    const { phone } = validate(OtpRequestSchema, req.body)
-    await assertContactFree(ctx.db, { phone })
-    await sendVerification(ctx.db, ctx.sms, secret, phone)
     res.status(202).end()
   })
 

@@ -1,4 +1,4 @@
-import { CONTACT_IN_USE, LIBRARY_DUPLICATE, VERIFICATION } from '@sadhana/contract'
+import { CONTACT_IN_USE, LIBRARY_DUPLICATE } from '@sadhana/contract'
 
 /**
  * English, the source of truth: the other dictionaries carry exactly these keys, which the compiler checks.
@@ -345,7 +345,6 @@ export const en = {
     nameHint: 'An administrator can correct your name if it has changed.',
     phone: 'Mobile number',
     email: 'Email',
-    code: 'Verification code',
     signInHint: 'You sign in with your mobile number or email.',
     address: 'Address',
     save: 'Save profile',
@@ -369,14 +368,6 @@ export const en = {
     targetFailed: "We couldn't save your target. Check your connection and try again.",
     yourChanges: 'Your changes',
     fromDate: (kind: string, date: string) => `${kind} · from ${date}`,
-  },
-  sendCode: {
-    send: 'Send code',
-    resend: 'Resend code',
-    sending: 'Sending…',
-    sent: (to: string) => `Code sent to ${to}. It expires in 10 minutes.`,
-    wait: 'Please wait a minute before requesting another code.',
-    failed: "We couldn't send the code. Check your connection and try again.",
   },
   reminders: {
     title: 'Reminders',
@@ -436,6 +427,9 @@ export const en = {
     saveName: 'Save name',
     cancel: 'Cancel',
     rename: 'Rename',
+    editPhone: 'Edit number',
+    newPhone: 'New mobile number',
+    savePhone: 'Save number',
     addDevotee: 'Add a devotee',
     name: 'Name',
     phone: 'Mobile number',
@@ -510,6 +504,7 @@ export const en = {
       ACCOUNT_REACTIVATED: 'Account reactivated',
       ROLE_CHANGED: 'Role changed',
       NAME_CHANGED: 'Name changed',
+      PHONE_CHANGED: 'Mobile number changed',
       PASSWORD_RESET_ISSUED: 'One-time password issued',
       RECORD_REVIEW_GRANTED: 'Record review granted',
       RECORD_REVIEW_REVOKED: 'Record review revoked',
@@ -572,12 +567,7 @@ export const en = {
     wrongCurrentPassword: "That isn't your current password.",
     phoneRequired: 'Enter your mobile number',
     phoneInvalid: 'Enter a valid mobile number',
-    codeFormat: 'Enter the 6-digit code we sent',
     // Widened from the contract's literal types, so the other languages can say them their own way.
-    codeRequired: VERIFICATION.required as string,
-    codeWrong: VERIFICATION.wrong as string,
-    codeExpired: VERIFICATION.expired as string,
-    codeExhausted: VERIFICATION.exhausted as string,
     phoneTaken: CONTACT_IN_USE.phone as string,
     emailTaken: CONTACT_IN_USE.email as string,
     nameRequired: "Enter the devotee's name",

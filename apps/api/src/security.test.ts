@@ -1,7 +1,10 @@
 import { addDays } from '@sadhana/domain'
 import { identifierOf, PASSWORD, TEMPORARY_PASSWORD } from '@sadhana/fixtures'
 import { once } from 'node:events'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import pino from 'pino'
 import request, { type Agent } from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -17,7 +20,6 @@ beforeAll(async () => {
 afterAll(() => ctx.close())
 
 const today = todayIn('Asia/Kolkata')
-const noSms = { send: async () => undefined }
 
 const login = (app: TestContext['app'], identifier: string, password: string) =>
   request(app).post('/api/auth/login').send({ identifier, password })
@@ -32,7 +34,7 @@ describe('logging', () => {
   it('never writes session cookies to the logs', async () => {
     const lines: string[] = []
     const logger = pino({ level: 'info' }, { write: (line: string) => void lines.push(line) })
-    const app = createApp({ db: ctx.db, config: { ...ctx.config, nodeEnv: 'development' }, logger, sms: noSms })
+    const app = createApp({ db: ctx.db, config: { ...ctx.config, nodeEnv: 'development' }, logger })
     const agent = request.agent(app)
     const login = await agent.post('/api/auth/login').send({ identifier: identifierOf('SH-0053'), password: PASSWORD }).expect(200)
     await agent.get('/api/me/profile').expect(200)
@@ -56,6 +58,19 @@ describe('headers', () => {
     const policy = String((await request(ctx.app).get('/api/health')).headers['content-security-policy'])
     expect(policy).toMatch(/style-src 'self'(;|$)/)
     expect(policy).not.toContain('unsafe-inline')
+  })
+
+  it('lets browsers keep hashed assets for a year but always revalidate the page itself', async () => {
+    const webDist = mkdtempSync(join(tmpdir(), 'sadhana-web-'))
+    mkdirSync(join(webDist, 'assets'))
+    writeFileSync(join(webDist, 'index.html'), '<!doctype html><title>Sadhana</title>')
+    writeFileSync(join(webDist, 'assets', 'index-abc123.js'), 'console.log(1)')
+    const app = createApp({ db: ctx.db, config: { ...ctx.config, webDist }, logger: createLogger('silent') })
+    const asset = await request(app).get('/assets/index-abc123.js').expect(200)
+    expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable')
+    const page = await request(app).get('/entry/2026-10-29').expect(200)
+    expect(page.headers['cache-control']).toBe('no-cache')
+    expect(page.text).toContain('Sadhana')
   })
 })
 
@@ -88,7 +103,7 @@ describe('cross-site requests', () => {
   })
 
   it('compare Origin with the host a trusted proxy forwards, never with one an untrusted client claims', async () => {
-    const behindProxy = createApp({ db: ctx.db, config: { ...ctx.config, trustProxy: 1 }, logger: createLogger('silent'), sms: noSms })
+    const behindProxy = createApp({ db: ctx.db, config: { ...ctx.config, trustProxy: 1 }, logger: createLogger('silent') })
     await request(behindProxy)
       .post('/api/auth/login')
       .set('Origin', 'https://sadhana.example')
@@ -216,7 +231,7 @@ describe('rate limits', () => {
   it('are shared between API instances through the database', async () => {
     const fresh = await testContext()
     try {
-      const twin = createApp({ db: fresh.db, config: fresh.config, logger: createLogger('silent'), sms: noSms })
+      const twin = createApp({ db: fresh.db, config: fresh.config, logger: createLogger('silent') })
       for (let attempt = 0; attempt < 5; attempt += 1) await login(fresh.app, identifierOf('SH-0043'), 'wrong').expect(401)
       await login(twin, identifierOf('SH-0043'), PASSWORD).expect(429)
     } finally {
